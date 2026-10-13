@@ -1,10 +1,13 @@
-# Builds the Android app (an offline WebView wrapper around index.html, made with Capacitor)
-# and publishes the APK on the repository's Releases page.
+# QA first: tests/qa.js plays the game in headless Chromium. Only when every check passes is the
+# Android app built (an offline WebView wrapper around index.html, made with Capacitor); builds from
+# main are published on the repository's Releases page.
 name: Android APK
 
 on:
   push:
     branches: [main, 'claude/**']
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -15,7 +18,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+
+      - name: Run the QA suite
+        run: node tests/qa.js
+
+      - name: Keep the QA report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-report
+          path: tests/qa-report.json
+
   apk:
+    needs: qa
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -85,6 +115,7 @@ jobs:
           path: TIV2-Storm-Chaser.apk
 
       - name: Publish on the Releases page
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-build-${{ github.run_number }}

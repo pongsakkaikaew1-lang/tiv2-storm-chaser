@@ -5,7 +5,9 @@ A 3D storm chasing game that runs in any modern browser, made for tablets.
 ## How a chase works
 
 1. **Base:** read the forecast map (orange risk area and the storm's expected direction),
-   pick a spawn point, choose your vehicle, refuel, repair and buy gear.
+   pick a spawn point, choose your vehicle, refuel, repair and buy gear. The shop has Service
+   (fuel, repair), Equipment (probes, probe rack, IMAX lens) and Field supplies: repair kits
+   (+35% armor) and fuel cans (+30% fuel) you use from the pause menu during a chase.
 2. **Radar:** after you deploy, the radar shows the risk area, then the supercell with a dashed
    line for its expected track. Get ahead of it before the tornado touches down.
 3. **Collect data:** park, press Hydraulics to lock down, then film with the camera, drop probes
@@ -77,16 +79,27 @@ them. The road is wet and glossy, grass sways in the wind, power lines run along
 vehicles have headlight beams, blinking amber warning lights and a roof beacon. The HUD has a weather
 radar window and a SPEED / WIND / DISTANCE readout.
 
-Pick **Graphics** on the start screen or in the pause menu: **High** (shadows, dense grass, every
-effect), **Medium** (no shadows, less grass and debris) or **Low** (older devices: no grass, headlight
-beams or lightning light). If the game runs below about 24 fps during a chase it steps down a level
+Pick **Graphics** on the start screen or in the pause menu: **Ultra** (renders Full HD 1080p or
+sharper, filmic ACES tone mapping, 4096 shadows, anti-aliasing from the next start), **High**
+(shadows, dense grass, every effect), **Medium** (no shadows, less grass and debris) or **Low** (older
+devices: no grass, headlight beams or lightning light).
+
+The vehicle gauges sit small at the bottom; **Hide** folds them into a one-line `ARMOR · FUEL`
+readout (remembered). If the game runs below about 24 fps during a chase it steps down a level
 on its own.
 
-## Android build
+## QA and Android build
 
-Every push runs `.github/workflows/android.yml`: it wraps the game in a Capacitor WebView app
-(landscape, full screen, screen kept on, files bundled inside the APK), builds a debug-signed APK and
-attaches it to a new release. `android-app/` holds the app's launcher icons, splash and main activity.
+`tests/qa.js` is the QA suite: it serves the repository locally, plays the real game in headless
+Chromium through a `?qa` hook and checks 13 scenarios (offline boot with no external requests, shop
+prices, admin panel, every vehicle's lockdown, storm cycle and radar products, all tornado types,
+wind thresholds, payout, field supplies, graphics levels including Ultra 1080p, phone layout and
+hidden gauges, saving, offline play through the service worker). Run it with
+`npm install --no-save playwright && npx playwright install chromium && node tests/qa.js`.
+
+Every push and pull request runs `.github/workflows/android.yml`: the QA suite first, then (if it
+passes) a Capacitor WebView app (landscape, full screen, screen kept on, files bundled inside the APK)
+is built as a debug-signed APK. Builds from `main` are attached to a new release. `android-app/` holds the app's launcher icons, splash and main activity.
 
 ## Controls
 

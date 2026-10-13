@@ -89,14 +89,24 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
 .icon-btn { width: 46px; height: 46px; border-radius: 12px; background: var(--panel); border: 1px solid var(--panel-edge); font-size: 13px; display: grid; place-items: center; }
 
 /* gauges */
-#gauges { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); padding: 10px 14px; display: grid; grid-template-columns: auto 1fr auto; gap: 6px 12px; align-items: center; width: min(340px, 44vw); font-size: 13px; }
+/* compact vehicle gauges; Hide folds them into a one-line readout */
+#gauges { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); padding: 5px 10px 7px; width: min(260px, 34vw); font-size: 11px; }
+#gaugeBody { display: grid; grid-template-columns: auto 1fr auto; gap: 3px 8px; align-items: center; }
+.g-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 3px; }
+#gaugeMini { font: 700 11px var(--font-mono); letter-spacing: 0.03em; white-space: nowrap; color: var(--muted); }
+.mini-btn { min-height: 26px; padding: 2px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--panel-edge); font-size: 12px; }
+#gauges.collapsed { width: auto; padding: 4px 6px 4px 10px; }
+#gauges.collapsed .g-head { margin: 0; }
+#gauges.collapsed #gaugeMini { color: var(--text); }
+#gauges.collapsed #gaugeBody { display: none; }
+#gauges .bar { height: 6px; }
 #gauges .lbl { color: var(--muted); letter-spacing: 0.04em; }
 #gauges .val { font-family: var(--font-display); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 .bar { height: 9px; border-radius: 6px; background: rgba(255, 255, 255, 0.12); overflow: hidden; min-width: 0; }
 .bar > i { display: block; height: 100%; width: 50%; border-radius: 6px; background: var(--good); transition: width 0.2s; }
 #hydStages { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.stage { font-size: 11px; color: var(--muted); display: grid; gap: 3px; }
-.stage .bar { height: 6px; }
+.stage { font-size: 10px; color: var(--muted); display: grid; gap: 2px; }
+#gauges .stage .bar { height: 4px; }
 
 /* controls */
 #stickZone { position: absolute; left: 0; bottom: 0; width: 46%; height: 62%; touch-action: none; }
@@ -179,6 +189,15 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
 .shop-row small { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; }
 .buy { padding: 10px 14px; border-radius: 12px; background: rgba(255, 138, 31, 0.2); border: 1px solid var(--hazard); font-size: 15px; white-space: nowrap; }
 .buy:disabled { opacity: 0.45; cursor: default; }
+.shop-sec { display: grid; gap: 8px; margin-bottom: 14px; }
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.shop-card { display: grid; gap: 7px; align-content: start; padding: 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--panel-edge); }
+.shop-card small { color: var(--muted); font-size: 13px; line-height: 1.4; }
+.shop-card .buy { justify-self: stretch; }
+.sc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.sc-head b { font-family: var(--font-display); font-weight: 500; font-size: 17px; }
+.sc-tag { font: 700 12px var(--font-mono); color: var(--warn); }
+.ghost:disabled { opacity: 0.45; cursor: default; }
 .lvl { color: var(--warn); letter-spacing: 2px; font-size: 13px; }
 #baseMsg { color: var(--good); min-height: 1.4em; }
 #baseWarn { color: var(--warn); }
@@ -195,7 +214,7 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
 
 @media (max-width: 760px) {
   #radar { width: 104px; height: 104px; }
-  #gauges { width: min(250px, 56vw); left: 16px; transform: none; bottom: auto; top: calc(262px + env(safe-area-inset-top, 0px)); font-size: 12px; padding: 8px 10px; }
+  #gauges { width: min(210px, 48vw); left: 16px; transform: none; bottom: auto; top: calc(262px + env(safe-area-inset-top, 0px)); padding: 5px 8px 6px; }
   #telemetry { font-size: 12px; padding: 4px 8px; }
   .act { width: 70px; height: 70px; font-size: 13px; }
   #btnHyd { width: 98px; height: 98px; }
@@ -204,6 +223,17 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
   .radar-grid { grid-template-columns: 1fr; }
 }
 @media (orientation: landscape) { #rotateHint { display: none; } }
+/* short landscape phones: smaller action buttons so nothing covers the view */
+@media (max-height: 460px) {
+  .act { width: 62px; height: 62px; font-size: 12px; }
+  #btnHyd { width: 88px; height: 88px; font-size: 14px; }
+  #actions { gap: 10px; }
+  #radar { width: 96px; height: 96px; }
+  #telemetry { font-size: 11px; padding: 3px 7px; }
+  #gauges { width: min(220px, 30vw); }
+  #toast { top: 40%; font-size: 14px; padding: 6px 12px; max-width: 60vw; }
+  #banner { top: 58%; font-size: 15px; padding: 8px 14px; }
+}
 @media (prefers-reduced-motion: reduce) { #guideArrow, .bar > i { transition: none; } }
 </style>
 
@@ -245,6 +275,8 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
   </div>
 
   <div id="gauges" class="panel">
+    <div class="g-head"><span id="gaugeMini">VEHICLE</span><button id="btnGauges" class="mini-btn" aria-expanded="true" aria-controls="gaugeBody">Hide</button></div>
+    <div id="gaugeBody">
     <span class="lbl">ARMOR</span><div class="bar"><i id="armorBar"></i></div><span id="armorVal" class="val">100%</span>
     <span class="lbl">FUEL</span><div class="bar"><i id="fuelBar"></i></div><span id="fuelVal" class="val">100%</span>
     <span class="lbl">WIND</span><div class="bar"><i id="windBar" style="background: var(--sky)"></i></div><span id="windVal" class="val">0 mph</span>
@@ -252,6 +284,7 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
       <div class="stage">Suspension<div class="bar"><i id="stSusp"></i></div></div>
       <div class="stage">Skirts<div class="bar"><i id="stSkirt"></i></div></div>
       <div class="stage">Spikes<div class="bar"><i id="stSpike"></i></div></div>
+    </div>
     </div>
   </div>
 
@@ -284,6 +317,7 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
       </div>
       <div class="seg-label">Graphics</div>
       <div id="gfxSeg" class="seg gfx-seg" role="group" aria-label="Graphics quality">
+        <button data-gfx="ultra" aria-pressed="false">Ultra<small>Full HD, filmic light</small></button>
         <button data-gfx="high" aria-pressed="true">High<small>Shadows, dense grass</small></button>
         <button data-gfx="medium" aria-pressed="false">Medium<small>No shadows</small></button>
         <button data-gfx="low" aria-pressed="false">Low<small>Older devices</small></button>
@@ -297,9 +331,14 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
     <div class="card panel">
       <h1>Paused</h1>
       <p>Drive with the joystick on the left. Park in the tornado's path, press Hydraulics, then Camera (or Scan in the Radar Truck) to collect data. Return to base to get paid for what you have so far. Keyboard: arrows or WASD to drive, R hydraulics, H camera, G probe, C camera view, F radar scan, M radar map, P pause.</p>
+      <div class="seg-label">Field supplies</div>
+      <div class="row">
+        <button id="btnUseKit" class="ghost">Repair kit</button>
+        <button id="btnUseCan" class="ghost">Fuel can</button>
+      </div>
       <div class="seg-label">Graphics</div>
       <div class="seg gfx-seg" role="group" aria-label="Graphics quality">
-        <button data-gfx="high">High</button><button data-gfx="medium">Medium</button><button data-gfx="low">Low</button>
+        <button data-gfx="ultra">Ultra</button><button data-gfx="high">High</button><button data-gfx="medium">Medium</button><button data-gfx="low">Low</button>
       </div>
       <div class="row">
         <button id="btnResume" class="go">Resume</button>
@@ -443,18 +482,28 @@ const srnd = (a, b) => a + (b - a) * srand();
 // ---------------------------------------------------------------------------
 const canvas = $('game');
 const dpr = window.devicePixelRatio || 1;
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: dpr < 2, powerPreference: 'high-performance' });
-// Quality: High (shadows, dense grass, every effect), Medium (no shadows, less grass and debris),
-// Low (older phones: no grass, headlight beams or lightning light)
-const GFX_NAMES = ['low', 'medium', 'high'];
+// anti-aliasing is fixed when the renderer is made, so Ultra turns it on from the next start
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: dpr < 2 || store.get('tiv2-gfx', 'high') === 'ultra', powerPreference: 'high-performance' });
+// Quality: Ultra (Full HD or sharper, filmic tone mapping, 4096 shadows), High (shadows, dense
+// grass, every effect), Medium (no shadows, less grass and debris), Low (older phones: no grass,
+// headlight beams or lightning light)
+const GFX_NAMES = ['low', 'medium', 'high', 'ultra'];
 const GFX = { level: Math.max(0, GFX_NAMES.indexOf(store.get('tiv2-gfx', 'high'))) };
-GFX.high = GFX.level === 2;
-const pixelRatioFor = (lv) => (lv === 2 ? Math.min(dpr, 1.5) : lv === 1 ? Math.min(dpr, 1.15) : 1);
+GFX.high = GFX.level >= 2;
+// Ultra renders at least 1080 pixels tall (Full HD), up to 2.5x the CSS size
+const pixelRatioFor = (lv) => (lv === 3 ? Math.min(2.5, Math.max(Math.min(dpr, 2), 1080 / Math.max(1, window.innerHeight)))
+  : lv === 2 ? Math.min(dpr, 1.5) : lv === 1 ? Math.min(dpr, 1.15) : 1);
 renderer.setPixelRatio(pixelRatioFor(GFX.level));
 renderer.shadowMap.enabled = GFX.high;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const maxAniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-const anisoFor = (lv) => (lv === 2 ? maxAniso : lv === 1 ? Math.min(4, maxAniso) : 1);
+const anisoFor = (lv) => (lv >= 2 ? maxAniso : lv === 1 ? Math.min(4, maxAniso) : 1);
+// Ultra: ACES filmic tone mapping for a more photographic contrast and highlight roll-off
+function applyToneMapping(lv) {
+  renderer.toneMapping = lv === 3 ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
+  renderer.toneMappingExposure = 1.3;
+}
+applyToneMapping(GFX.level);
 const allTex = []; // procedural textures; Low quality turns their anisotropic filtering off
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, 1, 0.5, 3200);
@@ -486,6 +535,13 @@ sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -70, right: 70, top: 70, bottom: -70, near: 100, far: 1100 });
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
 scene.add(sun.target);
+function applyShadowSize(lv) {
+  const size = lv === 3 ? 4096 : 2048;
+  if (sun.shadow.mapSize.x === size) return;
+  sun.shadow.mapSize.set(size, size);
+  if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+}
+applyShadowSize(GFX.level);
 // see-through decals and glows never cast shadows
 const shadows = (obj, cast, receive) => obj.traverse((o) => { if (o.isMesh) { o.castShadow = cast && !o.material.transparent; o.receiveShadow = receive; } });
 
@@ -838,7 +894,7 @@ const GRASS = (() => {
 const GRASS_SPAN = 110; // metres of grass around the camera
 function buildGrass() {
   if (GRASS.mesh) { scene.remove(GRASS.mesh); GRASS.mesh.dispose(); GRASS.mesh = null; }
-  GRASS.n = [0, 60, 92][GFX.level];
+  GRASS.n = [0, 60, 92, 124][GFX.level];
   if (!GRASS.n) return;
   GRASS.mesh = new THREE.InstancedMesh(GRASS.geo, GRASS.mat, GRASS.n * GRASS.n);
   GRASS.mesh.frustumCulled = false;
@@ -1831,12 +1887,13 @@ const UPGRADES = [
   { key: 'tank', name: 'Long-range tank', desc: 'Uses 25% less fuel per level', cost: [600, 1400] },
   { key: 'hydro', name: 'Fast hydraulics', desc: 'Locks down 25% faster per level', cost: [700, 1500] }
 ];
-const PRICE = { paint: 250, fuel: 2, repair: 5, probe: 150, rack: 800, lens: 1200, tow: 250 }; // fuel and repair are per 1%
+const PRICE = { paint: 250, fuel: 2, repair: 5, probe: 150, rack: 800, lens: 1200, tow: 250, kit: 300, can: 120 }; // fuel and repair are per 1%
+const SUPPLY_MAX = 3; // repair kits and fuel cans carried into the field
 const PAY_RATE = 0.5;        // dollars paid per data point
 const FUEL_RATE = 100 / 300; // % per second at the vehicle's stock top speed: a full tank lasts 5 minutes flat out
 
 // career: everything that carries over between storms and visits
-const CAREER_START = { money: 1500, dataTotal: 0, storms: 0, probes: 3, rack: 0, lens: 0, spawn: 0, vehicle: 'tiv2', fleet: {} };
+const CAREER_START = { money: 1500, dataTotal: 0, storms: 0, probes: 3, rack: 0, lens: 0, kits: 0, cans: 0, spawn: 0, vehicle: 'tiv2', fleet: {} };
 let career = Object.assign({}, CAREER_START, store.get('tiv2-career', {}));
 career.fleet = career.fleet || {};
 
@@ -2033,7 +2090,7 @@ const debrisData = [];
     debris.setColorAt(i, c.setHex(cols[i % cols.length]).multiplyScalar(rnd(0.8, 1.2)));
   }
 }
-const debrisCount = () => [40, 90, 160][GFX.level];
+const debrisCount = () => [40, 90, 160, 160][GFX.level];
 function updateDebris(dt, time) {
   debris.visible = T.active && T.inten > 0.2 && T.ground > 0.3;
   if (!debris.visible) return;
@@ -2199,6 +2256,16 @@ const el = {
   recFrame: $('recFrame'), recDot: $('recDot'), flash: $('flash'), radar: $('radar')
 };
 let toastTimer = 0, bannerLock = 0;
+// the gauges can be folded away so they do not cover the view; the choice is remembered
+let gaugesHidden = store.get('tiv2-gauges-hidden', false);
+function setGaugesHidden(h) {
+  gaugesHidden = h; store.set('tiv2-gauges-hidden', h);
+  $('gauges').classList.toggle('collapsed', h);
+  const b = $('btnGauges'); b.textContent = h ? 'Show' : 'Hide'; b.setAttribute('aria-expanded', String(!h));
+  if (!h) $('gaugeMini').textContent = 'VEHICLE';
+}
+$('btnGauges').addEventListener('click', () => setGaugesHidden(!gaugesHidden));
+setGaugesHidden(gaugesHidden);
 function toast(text, ms) { el.toast.textContent = text; el.toast.hidden = false; el.toast.style.opacity = 1; toastTimer = (ms || 2200) / 1000; }
 function banner(text, kind, secs) { el.banner.textContent = text; el.banner.className = 'panel ' + (kind || ''); el.banner.hidden = false; bannerLock = secs || 0; }
 function hideBanner() { if (bannerLock <= 0) el.banner.hidden = true; }
@@ -3131,6 +3198,7 @@ function updateHUD(dt, w, time) {
   const mph = w.ms * 2.237;
   el.windBar.style.width = clamp(mph / 230 * 100, 0, 100) + '%';
   el.windVal.textContent = Math.round(mph) + ' mph';
+  if (gaugesHidden) $('gaugeMini').textContent = `ARMOR ${Math.max(0, Math.round(c.armor))}% · FUEL ${Math.ceil(G.fuel)}%` + (mph > 20 ? ` · WIND ${Math.round(mph)}` : '');
   // telemetry readout: speed, wind at the truck, distance to the tornado (or the storm, or the risk area)
   $('tmSpeed').textContent = Math.round(Math.abs(c.speed) * 2.237);
   $('tmWind').textContent = Math.round(mph);
@@ -3295,32 +3363,78 @@ function shopRow(title, desc, label, disabled, onBuy) {
   b.addEventListener('click', onBuy); row.appendChild(b);
   return row;
 }
+// shop cards: title, short description, optional meter, one buy button
+function shopCard(o) {
+  const card = document.createElement('div'); card.className = 'shop-card';
+  card.innerHTML = `<div class="sc-head"><b>${o.title}</b>${o.tag ? `<span class="sc-tag">${o.tag}</span>` : ''}</div><small>${o.desc}</small>` +
+    (o.meter != null ? `<div class="bar"><i style="width:${Math.round(clamp(o.meter, 0, 1) * 100)}%;background:${o.color || 'var(--good)'}"></i></div>` : '');
+  const b = document.createElement('button'); b.className = 'buy'; b.textContent = o.label; b.disabled = !!o.disabled;
+  b.addEventListener('click', o.buy); card.appendChild(b);
+  return card;
+}
+function shopSection(title, cards) {
+  const sec = document.createElement('section'); sec.className = 'shop-sec';
+  sec.innerHTML = `<h2 class="sub">${title}</h2>`;
+  const grid = document.createElement('div'); grid.className = 'shop-grid';
+  cards.forEach((c) => grid.appendChild(c)); sec.appendChild(grid);
+  return sec;
+}
 function renderShop() {
   const list = $('shopList'); list.innerHTML = '';
   const fuelNeed = 100 - G.fuel, fuelCost = Math.ceil(fuelNeed * PRICE.fuel);
-  list.appendChild(shopRow(`Fuel ${Math.ceil(G.fuel)}%`, `$${PRICE.fuel} per 1%. Fills what you can afford.`, fuelNeed < 0.5 ? 'Full' : `Fill up $${fmt(fuelCost)}`, fuelNeed < 0.5, () => {
-    const add = career.unlimited ? fuelNeed : Math.min(fuelNeed, career.money / PRICE.fuel);
-    if (add < 0.5) { spend(fuelCost); return; }
-    if (!career.unlimited) career.money -= Math.ceil(add * PRICE.fuel); G.fuel = Math.min(100, G.fuel + add); saveCareer(); baseMsg('Tank filled.'); renderBase();
-  }));
   const armNeed = 100 - G.car.armor, armCost = Math.ceil(armNeed * PRICE.repair);
-  list.appendChild(shopRow(`Repair ${Math.round(G.car.armor)}%`, `$${PRICE.repair} per 1% of armor. Fixes what you can afford.`, armNeed < 0.5 ? 'Like new' : `Repair $${fmt(armCost)}`, armNeed < 0.5, () => {
-    const add = career.unlimited ? armNeed : Math.min(armNeed, career.money / PRICE.repair);
-    if (add < 0.5) { spend(armCost); return; }
-    if (!career.unlimited) career.money -= Math.ceil(add * PRICE.repair); G.car.armor = Math.min(100, G.car.armor + add); saveCareer(); baseMsg('Repaired.'); renderBase();
-  }));
   const cap = probeCap();
-  list.appendChild(shopRow(`Probe ${career.probes}/${cap}`, 'Drop it in the tornado\'s path for a big data bonus. Missed probes come back.', career.probes >= cap ? 'Rack full' : `Buy one $${PRICE.probe}`, career.probes >= cap, () => {
-    if (!spend(PRICE.probe)) return; career.probes++; saveCareer(); baseMsg('Probe loaded.'); renderBase();
-  }));
-  list.appendChild(shopRow('Probe rack', 'Carry 6 probes instead of 3.', career.rack ? 'Owned' : `Buy $${fmt(PRICE.rack)}`, !!career.rack, () => {
-    if (!spend(PRICE.rack)) return; career.rack = 1; saveCareer(); baseMsg('Probe rack fitted: room for 6 probes.'); renderBase();
-  }));
-  list.appendChild(shopRow('IMAX lens', 'Filming earns 50% more data.', career.lens ? 'Owned' : `Buy $${fmt(PRICE.lens)}`, !!career.lens, () => {
-    if (!spend(PRICE.lens)) return; career.lens = 1; saveCareer(); baseMsg('IMAX lens fitted.'); renderBase();
-  }));
-  $('payInfo').textContent = `Data is paid at $${PAY_RATE.toFixed(2)} per point. Lifetime data: ${fmt(career.dataTotal)}.`;
+  list.appendChild(shopSection('Service', [
+    shopCard({ title: 'Fuel', tag: `${Math.ceil(G.fuel)}%`, desc: `$${PRICE.fuel} per 1%. Fills what you can afford.`, meter: G.fuel / 100, color: G.fuel > 30 ? 'var(--warn)' : 'var(--rec)',
+      label: fuelNeed < 0.5 ? 'Full' : `Fill up $${fmt(fuelCost)}`, disabled: fuelNeed < 0.5, buy: () => {
+        const add = career.unlimited ? fuelNeed : Math.min(fuelNeed, career.money / PRICE.fuel);
+        if (add < 0.5) { spend(fuelCost); return; }
+        if (!career.unlimited) career.money -= Math.ceil(add * PRICE.fuel);
+        G.fuel = Math.min(100, G.fuel + add); saveCareer(); baseMsg('Tank filled.'); renderBase();
+      } }),
+    shopCard({ title: 'Repair', tag: `${Math.round(G.car.armor)}%`, desc: `$${PRICE.repair} per 1% of armor. Fixes what you can afford.`, meter: G.car.armor / 100, color: G.car.armor > 50 ? 'var(--good)' : G.car.armor > 25 ? 'var(--warn)' : 'var(--rec)',
+      label: armNeed < 0.5 ? 'Like new' : `Repair $${fmt(armCost)}`, disabled: armNeed < 0.5, buy: () => {
+        const add = career.unlimited ? armNeed : Math.min(armNeed, career.money / PRICE.repair);
+        if (add < 0.5) { spend(armCost); return; }
+        if (!career.unlimited) career.money -= Math.ceil(add * PRICE.repair);
+        G.car.armor = Math.min(100, G.car.armor + add); saveCareer(); baseMsg('Repaired.'); renderBase();
+      } })
+  ]));
+  list.appendChild(shopSection('Equipment', [
+    shopCard({ title: 'Probe', tag: `${career.probes}/${cap}`, desc: 'Drop it in the tornado\'s path for a big data bonus. Missed probes come back.', meter: career.probes / cap,
+      label: career.probes >= cap ? 'Rack full' : `Buy one $${PRICE.probe}`, disabled: career.probes >= cap,
+      buy: () => { if (!spend(PRICE.probe)) return; career.probes++; saveCareer(); baseMsg('Probe loaded.'); renderBase(); } }),
+    shopCard({ title: 'Probe rack', tag: career.rack ? 'Owned' : '', desc: 'Carry 6 probes instead of 3.',
+      label: career.rack ? 'Owned' : `Buy $${fmt(PRICE.rack)}`, disabled: !!career.rack,
+      buy: () => { if (!spend(PRICE.rack)) return; career.rack = 1; saveCareer(); baseMsg('Probe rack fitted: room for 6 probes.'); renderBase(); } }),
+    shopCard({ title: 'IMAX lens', tag: career.lens ? 'Owned' : '', desc: 'Filming earns 50% more data.',
+      label: career.lens ? 'Owned' : `Buy $${fmt(PRICE.lens)}`, disabled: !!career.lens,
+      buy: () => { if (!spend(PRICE.lens)) return; career.lens = 1; saveCareer(); baseMsg('IMAX lens fitted.'); renderBase(); } })
+  ]));
+  list.appendChild(shopSection('Field supplies (use them from the pause menu during a chase)', [
+    shopCard({ title: 'Repair kit', tag: `${career.kits}/${SUPPLY_MAX}`, desc: 'Patches 35% armor out in the field.', meter: career.kits / SUPPLY_MAX,
+      label: career.kits >= SUPPLY_MAX ? 'Full' : `Buy $${PRICE.kit}`, disabled: career.kits >= SUPPLY_MAX,
+      buy: () => { if (!spend(PRICE.kit)) return; career.kits++; saveCareer(); baseMsg('Repair kit packed.'); renderBase(); } }),
+    shopCard({ title: 'Fuel can', tag: `${career.cans}/${SUPPLY_MAX}`, desc: 'Adds 30% fuel out in the field.', meter: career.cans / SUPPLY_MAX, color: 'var(--warn)',
+      label: career.cans >= SUPPLY_MAX ? 'Full' : `Buy $${PRICE.can}`, disabled: career.cans >= SUPPLY_MAX,
+      buy: () => { if (!spend(PRICE.can)) return; career.cans++; saveCareer(); baseMsg('Fuel can packed.'); renderBase(); } })
+  ]));
+  $('payInfo').textContent = `Data is paid at $${PAY_RATE.toFixed(2)} per point. Lifetime data: ${fmt(career.dataTotal)} from ${fmt(career.storms)} storms.`;
 }
+// field supplies, used from the pause menu
+function renderSupplies() {
+  const k = $('btnUseKit'), f = $('btnUseCan');
+  k.textContent = `Repair kit +35% (${career.kits} left)`; k.disabled = career.kits <= 0 || G.car.armor >= 99.5;
+  f.textContent = `Fuel can +30% (${career.cans} left)`; f.disabled = career.cans <= 0 || G.fuel >= 99.5;
+}
+press($('btnUseKit'), () => {
+  if (career.kits <= 0 || G.car.armor >= 99.5) return;
+  career.kits--; G.car.armor = Math.min(100, G.car.armor + 35); saveCareer(); renderSupplies(); AudioFX.clunk();
+});
+press($('btnUseCan'), () => {
+  if (career.cans <= 0 || G.fuel >= 99.5) return;
+  career.cans--; G.fuel = Math.min(100, G.fuel + 30); G._fuelWarn = G.fuel < 15; G._fuelOut = false; saveCareer(); renderSupplies(); AudioFX.hiss();
+});
 function renderBase() {
   $('baseMoney').textContent = moneyText();
   renderForecast(); renderGarage(); renderShop();
@@ -3396,6 +3510,7 @@ press($('btnReset'), () => {
 // ---------------------------------------------------------------------------
 function resize() {
   const w = canvas.clientWidth || window.innerWidth, h = canvas.clientHeight || window.innerHeight;
+  renderer.setPixelRatio(pixelRatioFor(GFX.level));
   renderer.setSize(w, h, false);
   camera.aspect = w / h; camera.updateProjectionMatrix();
 }
@@ -3406,7 +3521,7 @@ function setPaused(p) {
   if (!G.running || !chasing()) return;
   G.paused = p;
   $('pauseOverlay').hidden = !p;
-  if (p) { input.throttle = input.steer = 0; }
+  if (p) { input.throttle = input.steer = 0; renderSupplies(); }
 }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && G.running && !G.paused) setPaused(true);
@@ -3427,9 +3542,10 @@ document.querySelectorAll('#levelSeg button').forEach((b) => {
   });
 });
 function setGfx(level) {
-  GFX.level = level; GFX.high = level === 2; store.set('tiv2-gfx', GFX_NAMES[level]);
+  GFX.level = level; GFX.high = level >= 2; store.set('tiv2-gfx', GFX_NAMES[level]);
   renderer.setPixelRatio(pixelRatioFor(level));
   renderer.shadowMap.enabled = GFX.high;
+  applyShadowSize(level); applyToneMapping(level);
   allTex.forEach((t) => { t.anisotropy = anisoFor(level); t.needsUpdate = true; });
   scene.traverse((o) => { if (o.material) [].concat(o.material).forEach((m) => { m.needsUpdate = true; }); });
   pbrMats.forEach((m) => { m.needsUpdate = true; });
@@ -3490,6 +3606,15 @@ function frame(now) {
   renderer.render(scene, camera);
 }
 requestAnimationFrame(frame);
+
+// automated QA (tests/qa.mjs) opens the page with ?qa to reach the game state; players never see it
+if (/[?&]qa\b/.test(location.search)) {
+  window.__qa = {
+    G, T, RAD, VEHICLES, TORNADO_TYPES, HYD, setGfx, openBase, setGaugesHidden,
+    get career() { return career; }, get gfx() { return GFX.level; }, get pixelRatio() { return renderer.getPixelRatio(); },
+    get toneMapped() { return renderer.toneMapping === THREE.ACESFilmicToneMapping; }
+  };
+}
 
 // offline play for the web version; the Android app already carries its files
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost') && !window.Capacitor) navigator.serviceWorker.register('sw.js').catch(() => {});
