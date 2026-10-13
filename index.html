@@ -88,12 +88,13 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
 .act { width: 82px; height: 82px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.35); display: grid; place-items: center; align-content: center; gap: 2px; font-size: 14px; line-height: 1.1; text-align: center; touch-action: none; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); }
 .act small { font-family: var(--font-body); font-size: 10px; opacity: 0.85; }
 .act:active { transform: scale(0.95); }
-#btnHyd { grid-column: 2; grid-row: 1 / span 2; width: 118px; height: 118px; font-size: 17px; background: conic-gradient(var(--hazard) calc(var(--p, 0) * 1turn), rgba(255, 138, 31, 0.28) 0); }
+#btnHyd { grid-column: 2; grid-row: 2 / span 2; width: 118px; height: 118px; font-size: 17px; background: conic-gradient(var(--hazard) calc(var(--p, 0) * 1turn), rgba(255, 138, 31, 0.28) 0); }
 #btnHyd.locked { background: conic-gradient(var(--good) 1turn, var(--good) 0); color: #0c1a10; }
-#btnCam { background: rgba(120, 20, 20, 0.8); }
+#btnCam { grid-column: 1; grid-row: 2; background: rgba(120, 20, 20, 0.8); }
+#btnScan { grid-column: 2; grid-row: 1; justify-self: center; background: rgba(30, 80, 150, 0.85); }
+#btnScan.on { background: #2f7fe0; }
 #btnCam.on { background: var(--rec); }
-#btnProbe { background: rgba(32, 110, 70, 0.82); }
-#btnView { position: absolute; right: calc(20px + env(safe-area-inset-right, 0px)); bottom: calc(180px + env(safe-area-inset-bottom, 0px)); }
+#btnProbe { grid-column: 1; grid-row: 3; background: rgba(32, 110, 70, 0.82); }
 
 /* center messages */
 #banner { position: absolute; left: 50%; top: 64%; transform: translate(-50%, -50%); padding: 12px 22px; font-family: var(--font-display); font-size: clamp(16px, 2.6vw, 24px); text-align: center; text-wrap: balance; max-width: min(560px, 70vw); pointer-events: none; transition: opacity 0.3s; }
@@ -137,13 +138,41 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
 .sum-list dt { color: var(--muted); }
 #rotateHint { font-size: 13px; color: var(--warn); }
 
+/* base screen between storms */
+.base-card { width: min(900px, 100%); gap: 14px; }
+.base-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.money { font-family: var(--font-display); font-size: clamp(24px, 3.6vw, 32px); color: var(--good); font-variant-numeric: tabular-nums; }
+#baseTabs { display: flex; gap: 4px; border-bottom: 1px solid var(--panel-edge); }
+#baseTabs button { flex: 1; padding: 10px 6px; background: none; border: 0; border-bottom: 3px solid transparent; font-size: 16px; color: var(--muted); }
+#baseTabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--hazard); }
+.fc-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+#mapCanvas { width: 100%; height: auto; aspect-ratio: 1; border-radius: 12px; display: block; cursor: pointer; }
+.fc-side { display: grid; gap: 12px; }
+#spawnSeg button { flex-basis: 100%; text-align: left; }
+.sub { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 17px; }
+.veh-status { display: flex; gap: 6px 16px; flex-wrap: wrap; color: var(--muted); font-size: 14px; }
+.veh-status b { color: var(--text); font-weight: 700; }
+.swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+.swatch { width: 44px; height: 44px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.25); }
+.swatch[aria-pressed="true"] { border-color: var(--hazard); box-shadow: 0 0 0 3px rgba(255, 138, 31, 0.35); }
+.shop-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--panel-edge); }
+.shop-row b { font-family: var(--font-display); font-weight: 500; font-size: 16px; }
+.shop-row small { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; }
+.buy { padding: 10px 14px; border-radius: 12px; background: rgba(255, 138, 31, 0.2); border: 1px solid var(--hazard); font-size: 15px; white-space: nowrap; }
+.buy:disabled { opacity: 0.45; cursor: default; }
+.lvl { color: var(--warn); letter-spacing: 2px; font-size: 13px; }
+#baseMsg { color: var(--good); min-height: 1.4em; }
+#baseWarn { color: var(--warn); }
+#baseWarn:empty { display: none; }
+#btnDeploy { position: sticky; bottom: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45); }
+
 @media (max-width: 760px) {
   #radar { width: 104px; height: 104px; }
   #gauges { width: min(250px, 56vw); left: 16px; transform: none; bottom: auto; top: calc(178px + env(safe-area-inset-top, 0px)); font-size: 12px; padding: 8px 10px; }
   .act { width: 70px; height: 70px; font-size: 13px; }
   #btnHyd { width: 98px; height: 98px; }
-  #btnView { bottom: calc(170px + env(safe-area-inset-bottom, 0px)); }
   #hydProgress { top: 62%; }
+  .fc-grid { grid-template-columns: 1fr; }
 }
 @media (orientation: landscape) { #rotateHint { display: none; } }
 @media (prefers-reduced-motion: reduce) { #guideArrow, .bar > i { transition: none; } }
@@ -165,9 +194,9 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
       </div>
     </div>
     <div class="right-col">
-      <div id="scoreBox" class="panel"><div id="score">0</div><div id="best">Best 0</div></div>
+      <div id="scoreBox" class="panel"><div id="score">$0</div><div id="best">0 storms chased</div></div>
       <div class="icon-row">
-        <button id="btnGarage" class="icon-btn" aria-label="Change vehicle">Car</button>
+        <button id="btnView" class="icon-btn" aria-label="Change camera view">View</button>
         <button id="btnSound" class="icon-btn" aria-label="Sound on or off">Sound</button>
         <button id="btnPause" class="icon-btn" aria-label="Pause game">Pause</button>
       </div>
@@ -184,6 +213,7 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
 
   <div id="gauges" class="panel">
     <span class="lbl">ARMOR</span><div class="bar"><i id="armorBar"></i></div><span id="armorVal" class="val">100%</span>
+    <span class="lbl">FUEL</span><div class="bar"><i id="fuelBar"></i></div><span id="fuelVal" class="val">100%</span>
     <span class="lbl">WIND</span><div class="bar"><i id="windBar" style="background: var(--sky)"></i></div><span id="windVal" class="val">0 mph</span>
     <div id="hydStages">
       <div class="stage">Suspension<div class="bar"><i id="stSusp"></i></div></div>
@@ -195,8 +225,8 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
   <div id="stickZone" aria-label="Steering joystick">
     <div id="stick"><div id="knob"></div><div id="stickHint">Drag to drive</div></div>
   </div>
-  <button id="btnView" class="icon-btn" aria-label="Change camera view">View</button>
   <div id="actions">
+    <button id="btnScan" class="act" aria-label="Radar scan" hidden>Scan<small>Radar</small></button>
     <button id="btnCam" class="act" aria-label="IMAX camera">Camera<small>Film it</small></button>
     <button id="btnHyd" class="act" aria-label="Hydraulics">Hydraulics<small>Lock down</small></button>
     <button id="btnProbe" class="act" aria-label="Drop a probe">Probe<small id="probeCount">3 left</small></button>
@@ -207,14 +237,12 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
   <div id="startOverlay" class="overlay">
     <div class="card panel">
       <h1><span>TIV2</span> Storm Chaser</h1>
-      <p>Pick your armored chase vehicle, drive it to the tornado, lock it to the ground, and film from as close as you dare.</p>
+      <p>Forecast the storm, pick your spot, collect data and get paid. Spend the money on fuel, repairs, gear and your own custom chase fleet.</p>
       <ol class="steps">
-        <li><b>1</b><span>Follow the orange arrow and the radar to find the tornado.</span></li>
-        <li><b>2</b><span>Park in its path and press <strong>Hydraulics</strong> until the button turns green.</span></li>
-        <li><b>3</b><span>Press <strong>Camera</strong> to film. Let the tornado pass right over you for a big bonus!</span></li>
+        <li><b>1</b><span>At base: read the forecast, pick a spawn point, fuel up and repair.</span></li>
+        <li><b>2</b><span>Watch the radar, get ahead of the storm's track and press <strong>Hydraulics</strong> to lock down.</span></li>
+        <li><b>3</b><span>Film it, drop probes, <strong>Scan</strong> with the Radar Truck, or let it pass over you. Data pays cash!</span></li>
       </ol>
-      <div class="seg-label">Vehicle</div>
-      <div class="seg veh-seg" role="group" aria-label="Vehicle"></div>
       <div class="seg-label">Difficulty</div>
       <div id="levelSeg" class="seg" role="group" aria-label="Difficulty">
         <button data-level="0" aria-pressed="false">Easy<small>EF0–EF2 tornadoes</small></button>
@@ -229,10 +257,10 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
   <div id="pauseOverlay" class="overlay" hidden>
     <div class="card panel">
       <h1>Paused</h1>
-      <p>Drive with the joystick on the left. Park near the tornado, press Hydraulics, then Camera to score. Keyboard: arrows or WASD to drive, R hydraulics, H camera, G probe, C camera view, V change vehicle.</p>
+      <p>Drive with the joystick on the left. Park in the tornado's path, press Hydraulics, then Camera (or Scan in the Radar Truck) to collect data. Return to base to get paid for what you have so far. Keyboard: arrows or WASD to drive, R hydraulics, H camera, G probe, C camera view, F radar scan, P pause.</p>
       <div class="row">
         <button id="btnResume" class="go">Resume</button>
-        <button id="btnRestart" class="ghost">Restart</button>
+        <button id="btnReturn" class="ghost">Return to base</button>
       </div>
     </div>
   </div>
@@ -242,19 +270,44 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
       <h1 id="summaryTitle">The tornado roped out</h1>
       <div id="summaryStars">★☆☆</div>
       <dl class="sum-list" id="summaryList"></dl>
-      <div class="row">
-        <button id="btnNext" class="go">Chase the next storm</button>
-        <button id="btnSumGarage" class="ghost">Change vehicle</button>
-      </div>
+      <button id="btnNext" class="go">Back to base</button>
     </div>
   </div>
 
-  <div id="garageOverlay" class="overlay" hidden>
-    <div class="card panel">
-      <h1>Garage</h1>
-      <p>Pick the vehicle for your next intercept. You keep your spot on the map.</p>
-      <div class="seg veh-seg" role="group" aria-label="Vehicle"></div>
-      <button id="btnGarageClose" class="go">Drive</button>
+  <div id="baseOverlay" class="overlay" hidden>
+    <div class="card panel base-card">
+      <div class="base-head"><h1>Base</h1><div id="baseMoney" class="money">$0</div></div>
+      <div id="baseTabs" role="tablist">
+        <button role="tab" data-tab="forecast" aria-selected="true">1 Forecast</button>
+        <button role="tab" data-tab="garage" aria-selected="false">2 Garage</button>
+        <button role="tab" data-tab="shop" aria-selected="false">3 Shop</button>
+      </div>
+      <section id="tab-forecast" class="fc-grid">
+        <canvas id="mapCanvas" width="520" height="520" aria-label="Forecast map with the risk area and spawn points"></canvas>
+        <div class="fc-side">
+          <p id="forecastText"></p>
+          <h2 class="sub">Spawn point</h2>
+          <div id="spawnSeg" class="seg" role="group" aria-label="Spawn point"></div>
+        </div>
+      </section>
+      <section id="tab-garage" hidden>
+        <div class="fc-side">
+          <div id="vehSeg" class="seg veh-seg" role="group" aria-label="Vehicle"></div>
+          <div id="vehStatus" class="veh-status"></div>
+          <h2 class="sub">Paint</h2>
+          <div id="paintRow" class="swatches"></div>
+          <h2 class="sub">Upgrades for this vehicle</h2>
+          <div id="upgradeList"></div>
+        </div>
+      </section>
+      <section id="tab-shop" hidden>
+        <div id="shopList"></div>
+        <p id="payInfo"></p>
+        <button id="btnReset" class="ghost">Start a new career</button>
+      </section>
+      <p id="baseMsg" role="status"></p>
+      <p id="baseWarn"></p>
+      <button id="btnDeploy" class="go">Deploy</button>
     </div>
   </div>
 </div>
@@ -1092,14 +1145,134 @@ function buildJoker2() {
   return { root, body, skirts, spikes, wheels, turret, anemo };
 }
 
-// Vehicles in the garage. maxF is top speed in m/s; dmg and push scale armor damage and wind shove.
+// ---------------------------------------------------------------------------
+// Radar Truck: a cab-over truck carrying a big Doppler dish on a turntable. It cannot take
+// a hit like the armored vehicles, but parked with its leveling jacks down it scans the storm.
+// ---------------------------------------------------------------------------
+const RADAR = {
+  cab: lam(0xe8e9e6), trim: lam(0x2a2d31), bed: lam(0x50555b), box: lam(0xb9bec4), dish: lam(0xf2f3f0, { side: THREE.DoubleSide }),
+  dishBack: lam(0x8c9196), stripe: lam(0xc8261e), jack: lam(0xf2c230),
+  label: new THREE.MeshBasicMaterial({ transparent: true, map: canvasTexture(256, 64, (g) => {
+    g.fillStyle = '#1d3d73'; g.font = JOKER_FONT(40); g.textAlign = 'center'; g.fillText('DOPPLER RADAR', 128, 44);
+  }) })
+};
+
+function buildRadarTruck() {
+  const root = new THREE.Group();
+  const body = new THREE.Group(); // everything the suspension lowers
+  root.add(body);
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  const box = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); body.add(m); return m; };
+  const cyl = (rt, rb, h, mat, x, y, z, seg) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 10), mat); m.position.set(x, y, z); body.add(m); return m; };
+
+  // frame, flatbed and the cab-over cab with a red stripe
+  box(1.5, 0.3, 7.0, RADAR.trim, 0, 0.85, -0.1);
+  box(2.4, 0.22, 5.2, RADAR.bed, 0, 1.11, -1.0);
+  box(2.36, 1.9, 1.75, RADAR.cab, 0, 1.95, 2.45);
+  box(2.38, 0.14, 1.77, RADAR.stripe, 0, 1.45, 2.45);
+  box(2.2, 0.75, 0.04, TRUCK.glass, 0, 2.4, 3.33);
+  [-1, 1].forEach((s) => {
+    box(0.04, 0.6, 0.9, TRUCK.glass, s * 1.19, 2.42, 2.6);
+    box(0.3, 0.14, 0.05, TRUCK.lamp, s * 0.85, 1.25, 3.33);
+    box(0.16, 0.1, 0.05, TRUCK.amber, s * 1.08, 1.6, 3.33);
+    box(0.25, 0.12, 0.05, TRUCK.tail, s * 1.0, 1.05, -3.62);
+    box(0.06, 0.4, 0.22, RADAR.trim, s * 1.28, 2.35, 3.2); // mirrors
+  });
+  box(2.3, 0.3, 0.2, RADAR.trim, 0, 0.95, 3.38); // bumper
+  box(1.2, 0.4, 0.04, RADAR.trim, 0, 1.4, 3.33); // grille
+  box(1.4, 0.08, 0.2, RADAR.trim, 0, 2.94, 2.7);
+  [-0.45, -0.15, 0.15, 0.45].forEach((x) => box(0.2, 0.08, 0.08, TRUCK.amber, x, 2.99, 2.78));
+
+  // generator and electronics box behind the cab with the DOPPLER RADAR label
+  box(2.2, 1.0, 1.1, RADAR.box, 0, 1.72, 0.95);
+  [-1, 1].forEach((s) => {
+    const label = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.25), RADAR.label);
+    label.position.set(s * 1.105, 1.8, 0.95); label.rotation.y = s * Math.PI / 2; body.add(label);
+  });
+
+  // turntable pedestal; the dish turret aims at the storm and sweeps while scanning
+  cyl(0.45, 0.55, 0.8, RADAR.bed, 0, 1.62, -1.6, 14);
+  const turret = new THREE.Group(); turret.position.set(0, 2.02, -1.6); body.add(turret);
+  const yoke = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.18, 0.5), RADAR.trim); yoke.position.y = 0.1; turret.add(yoke);
+  [-1, 1].forEach((s) => { const arm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.0, 0.3), RADAR.trim); arm.position.set(s * 0.45, 0.6, 0); turret.add(arm); });
+  // parabolic dish, opening tipped forward and up
+  const dishG = new THREE.Group(); dishG.position.y = 1.05; dishG.rotation.x = Math.PI / 2 - 0.35; turret.add(dishG);
+  const prof = [];
+  for (let i = 0; i <= 10; i++) { const r = 1.25 * i / 10; prof.push(new THREE.Vector2(r, r * r / 4.2)); }
+  const dish = new THREE.Mesh(new THREE.LatheGeometry(prof, 28), RADAR.dish); dishG.add(dish);
+  const back = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.2, 0.25, 12), RADAR.dishBack); back.position.y = -0.08; dishG.add(back);
+  const feed = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.2, 10), RADAR.dishBack); feed.position.y = 0.95; dishG.add(feed);
+  for (let i = 0; i < 3; i++) {
+    const a = i * TAU / 3, bx = Math.cos(a) * 1.05, bz = Math.sin(a) * 1.05, by = 1.05 * 1.05 / 4.2;
+    const strut = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1, 4), RADAR.dishBack);
+    const from = new THREE.Vector3(bx, by, bz), to = new THREE.Vector3(0, 0.9, 0);
+    strut.scale.y = from.distanceTo(to); strut.position.copy(from).add(to).multiplyScalar(0.5);
+    strut.quaternion.setFromUnitVectors(RAM_UP, to.clone().sub(from).normalize()); dishG.add(strut);
+  }
+
+  // anemometer on a short mast at the back of the cab roof
+  cyl(0.025, 0.025, 0.9, RADAR.trim, 0.8, 3.35, 1.75, 6);
+  const anemo = new THREE.Group(); anemo.position.set(0.8, 3.82, 1.75); body.add(anemo);
+  for (let i = 0; i < 3; i++) {
+    const holder = new THREE.Group(); holder.rotation.y = i * TAU / 3;
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.02, 0.02), TRUCK.chrome); arm.position.x = 0.11; holder.add(arm);
+    const cup = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), TRUCK.chrome); cup.position.x = 0.22; holder.add(cup);
+    anemo.add(holder);
+  }
+
+  // four yellow leveling jacks at the corners push straight down into the ground
+  const spikes = [];
+  [-1, 1].forEach((s) => [2.0, -3.2].forEach((z) => {
+    box(0.3, 0.1, 0.3, RADAR.trim, s * 1.3, 1.2, z);
+    hydraulicRam(body, spikes, V(s * 1.3, 1.2, z), V(s * 1.3, 0.55, z), RADAR.jack, RADAR.trim);
+  }));
+
+  // six wheels: one front axle, tandem rear, out in the open
+  const wheels = [];
+  [[2.4, true], [-1.6, false], [-2.75, false]].forEach(([z, frontW]) => [-1, 1].forEach((s) => {
+    const r = 0.52;
+    const steer = new THREE.Group(); steer.position.set(s * 1.0, r, z); root.add(steer);
+    const spin = new THREE.Group(); steer.add(spin);
+    const tire = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.4, 16), TRUCK.tire); tire.rotation.z = Math.PI / 2; spin.add(tire);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.5, r * 0.5, 0.42, 10), TRUCK.hub); hub.rotation.z = Math.PI / 2; spin.add(hub);
+    wheels.push({ steer, spin, r, front: frontW });
+  }));
+
+  return { root, body, skirts: [], spikes, wheels, turret, anemo };
+}
+
+// Vehicles in the garage. maxF is top speed in m/s; dmg and push scale armor damage and wind
+// shove; fuelUse scales how fast the tank empties; paint lists [material, shade] pairs to recolor.
 const VEHICLES = [
-  { id: 'tiv2', name: 'TIV2', stats: 'Top speed 58 mph · Heavy armor', build: buildTruck, maxF: 26, dmg: 1, push: 1 },
-  { id: 'joker1', name: 'Joker 1', stats: 'Top speed 69 mph · Lighter armor', build: buildJoker, maxF: 31, dmg: 1.25, push: 1.2 },
-  { id: 'joker2', name: 'Joker 2', stats: 'Top speed 51 mph · Heaviest armor', build: buildJoker2, maxF: 23, dmg: 0.8, push: 0.8 }
+  { id: 'tiv2', name: 'TIV2', stats: 'Top speed 58 mph · Heavy armor', build: buildTruck, maxF: 26, dmg: 1, push: 1, fuelUse: 1, paint: [[TRUCK.body, 1], [TRUCK.panel, 0.85]] },
+  { id: 'joker1', name: 'Joker 1', stats: 'Top speed 69 mph · Lighter armor', build: buildJoker, maxF: 31, dmg: 1.25, push: 1.2, fuelUse: 1.2, paint: [[JOKER.body, 1], [JOKER.panel, 1.2]] },
+  { id: 'joker2', name: 'Joker 2', stats: 'Top speed 51 mph · Heaviest armor', build: buildJoker2, maxF: 23, dmg: 0.8, push: 0.8, fuelUse: 1.3, paint: [[JOKER2.body, 1], [JOKER2.skirt, 0.8], [JOKER2.panel, 1.15]] },
+  { id: 'radar', name: 'Radar Truck', stats: 'Top speed 60 mph · Scans storms · Light armor', build: buildRadarTruck, maxF: 27, dmg: 1.6, push: 1.4, fuelUse: 0.9, canScan: true, paint: [[RADAR.cab, 1]] }
 ];
+VEHICLES.forEach((v) => v.paint.forEach((p) => p.push(p[0].color.getHex())));
 const fleet = {};
 let truck = null;
+
+// customization bought with storm money
+const PAINTS = [
+  { name: 'Stock', hex: null }, { name: 'Storm grey', hex: 0x6f757c }, { name: 'Midnight', hex: 0x1d2024 },
+  { name: 'Hazard orange', hex: 0xd2641c }, { name: 'Rescue red', hex: 0xa32a22 }, { name: 'Chase white', hex: 0xd9dcde },
+  { name: 'Army green', hex: 0x4f5c3a }, { name: 'Sky blue', hex: 0x2f68a8 }, { name: 'Royal purple', hex: 0x5a2e8c }
+];
+const UPGRADES = [
+  { key: 'engine', name: 'Engine tune', desc: '+8% top speed per level', cost: [800, 1600, 3000] },
+  { key: 'plating', name: 'Armor plating', desc: '12% less damage and wind shove per level', cost: [900, 1800, 3200] },
+  { key: 'tank', name: 'Long-range tank', desc: 'Uses 25% less fuel per level', cost: [600, 1400] },
+  { key: 'hydro', name: 'Fast hydraulics', desc: 'Locks down 25% faster per level', cost: [700, 1500] }
+];
+const PRICE = { paint: 250, fuel: 2, repair: 5, probe: 150, rack: 800, lens: 1200, tow: 250 }; // fuel and repair are per 1%
+const PAY_RATE = 0.5;        // dollars paid per data point
+const FUEL_RATE = 100 / 300; // % per second at the vehicle's stock top speed: a full tank lasts 5 minutes flat out
+
+// career: everything that carries over between storms and visits
+const CAREER_START = { money: 1500, dataTotal: 0, storms: 0, probes: 3, rack: 0, lens: 0, spawn: 0, vehicle: 'tiv2', fleet: {} };
+let career = Object.assign({}, CAREER_START, store.get('tiv2-career', {}));
+career.fleet = career.fleet || {};
 
 // ---------------------------------------------------------------------------
 // Game state
@@ -1108,30 +1281,60 @@ const EF_MS = [33, 43, 54, 66, 80, 100];        // peak wind m/s per EF rating
 const LEVELS = [{ min: 0, max: 2 }, { min: 0, max: 4 }, { min: 2, max: 5 }];
 const HYD = { RETRACTED: 0, DEPLOYING: 1, LOCKED: 2, RETRACTING: 3 };
 const DEPLOY_T = 3.0, RETRACT_T = 2.4;
+const BUILD_T = 40; // seconds the supercell is on radar before it drops a tornado
 
+// phase: 'base' (between storms) → 'calm' (risk area only) → 'build' (supercell) → 'active' (tornado) → 'done' (summary)
 const G = {
   running: false, paused: false, level: store.get('tiv2-level', 1), vehicle: 0,
-  score: 0, best: store.get('tiv2-best', 0), stormScore: 0,
-  phase: 'calm', phaseT: 14, storm: 0, flash: 0, nextBolt: 4,
+  stormScore: 0, phase: 'base', phaseT: 0, storm: 0, flash: 0, nextBolt: 4,
   car: { x: 0, z: -40, h: 0, speed: 0, steer: 0, driftX: 0, driftZ: 0, lift: 0, spinV: 0, armor: 100 },
+  fuel: 100,
   hyd: { state: HYD.RETRACTED, t: 0, susp: 0, skirt: 0, spike: 0 },
-  rec: false, recT: 0, probes: 3, probeList: [],
+  rec: false, recT: 0, scan: false, probeList: [],
+  plan: null, cell: null,
   view: 0, camShake: 0,
-  stats: { closest: Infinity, intercept: false, probeHits: 0, rec: 0 }
+  stats: { closest: Infinity, intercept: false, probeHits: 0, rec: 0, scan: 0 }
 };
 const T = { active: false, x: 0, z: 0, ef: 0, R: 20, H: 300, inten: 0, age: 0, life: 90, yaw: 0, yawVel: 0, speed: 9, hitPlayer: false };
 
-// swap the model in the scene; the hydraulics start retracted on the new vehicle
+const vehicleState = (v) => {
+  v = v || VEHICLES[G.vehicle];
+  return career.fleet[v.id] || (career.fleet[v.id] = { fuel: 100, armor: 100, paint: 0, engine: 0, plating: 0, tank: 0, hydro: 0 });
+};
+// the current vehicle's numbers with its upgrades applied
+function vstats() {
+  const v = VEHICLES[G.vehicle], s = vehicleState(v);
+  return {
+    maxF: v.maxF * (1 + 0.08 * s.engine), dmg: v.dmg * (1 - 0.12 * s.plating), push: v.push * (1 - 0.12 * s.plating),
+    fuelUse: v.fuelUse * Math.pow(0.75, s.tank), hydro: 1 + 0.25 * s.hydro, canScan: !!v.canScan
+  };
+}
+const probeCap = () => 3 + career.rack * 3;
+function saveCareer() {
+  const s = vehicleState();
+  s.armor = Math.max(0, Math.round(G.car.armor)); s.fuel = Math.round(G.fuel * 10) / 10;
+  store.set('tiv2-career', career);
+}
+function applyPaint(v, idx) {
+  const p = PAINTS[idx] || PAINTS[0];
+  v.paint.forEach(([mat, shade, stock]) => { if (p.hex == null) mat.color.setHex(stock); else mat.color.setHex(p.hex).multiplyScalar(shade); });
+}
+
+// swap the model in the scene and load that vehicle's fuel, armor and paint
 function setVehicle(i) {
   const v = VEHICLES[i] || VEHICLES[0];
-  if (truck) scene.remove(truck.root);
+  if (truck) { saveCareer(); scene.remove(truck.root); }
   truck = fleet[v.id] || (fleet[v.id] = v.build());
   scene.add(truck.root);
   G.vehicle = VEHICLES.indexOf(v);
-  store.set('tiv2-vehicle', v.id);
+  career.vehicle = v.id;
+  const s = vehicleState(v);
+  G.car.armor = s.armor; G.fuel = s.fuel;
+  applyPaint(v, s.paint);
   Object.assign(G.hyd, { state: HYD.RETRACTED, t: 0, susp: 0, skirt: 0, spike: 0 });
+  G.scan = false;
 }
-setVehicle(Math.max(0, VEHICLES.findIndex((v) => v.id === store.get('tiv2-vehicle', 'tiv2'))));
+setVehicle(Math.max(0, VEHICLES.findIndex((v) => v.id === career.vehicle)));
 
 // ---------------------------------------------------------------------------
 // Tornado visuals
@@ -1282,14 +1485,15 @@ const el = {
   score: $('score'), best: $('best'), banner: $('banner'), toast: $('toast'), hydProgress: $('hydProgress'),
   hydStageText: $('hydStageText'), hydBar: $('hydBar'), armorBar: $('armorBar'), armorVal: $('armorVal'),
   windBar: $('windBar'), windVal: $('windVal'), stSusp: $('stSusp'), stSkirt: $('stSkirt'), stSpike: $('stSpike'),
-  btnHyd: $('btnHyd'), btnCam: $('btnCam'), btnProbe: $('btnProbe'), probeCount: $('probeCount'),
+  btnHyd: $('btnHyd'), btnCam: $('btnCam'), btnProbe: $('btnProbe'), btnScan: $('btnScan'), probeCount: $('probeCount'),
+  fuelBar: $('fuelBar'), fuelVal: $('fuelVal'), radarLabel: $('radarLabel'),
   recFrame: $('recFrame'), recDot: $('recDot'), flash: $('flash'), radar: $('radar')
 };
 let toastTimer = 0, bannerLock = 0;
 function toast(text, ms) { el.toast.textContent = text; el.toast.hidden = false; el.toast.style.opacity = 1; toastTimer = (ms || 2200) / 1000; }
 function banner(text, kind, secs) { el.banner.textContent = text; el.banner.className = 'panel ' + (kind || ''); el.banner.hidden = false; bannerLock = secs || 0; }
 function hideBanner() { if (bannerLock <= 0) el.banner.hidden = true; }
-function addScore(n) { G.score = Math.max(0, Math.round(G.score + n)); G.stormScore += n; if (G.score > G.best) { G.best = G.score; store.set('tiv2-best', G.best); } }
+function addScore(n) { G.stormScore += n; } // data points, paid out at the end of the storm
 const fmt = (n) => Math.round(n).toLocaleString('en-US');
 
 // ---------------------------------------------------------------------------
@@ -1330,6 +1534,7 @@ function press(btn, fn) { btn.addEventListener('pointerdown', (e) => { e.prevent
 press(el.btnHyd, () => toggleHydraulics());
 press(el.btnCam, () => toggleCamera());
 press(el.btnProbe, () => dropProbe());
+press(el.btnScan, () => toggleScan());
 press($('btnView'), () => { G.view = (G.view + 1) % 4; toast(['View: chase', 'View: close', 'View: high', 'View: walk around the truck'][G.view], 1200); });
 press($('btnPause'), () => setPaused(true));
 press($('btnSound'), () => { AudioFX.setOn(!AudioFX.on); $('btnSound').textContent = AudioFX.on ? 'Sound' : 'Muted'; });
@@ -1338,11 +1543,11 @@ $('btnSound').textContent = AudioFX.on ? 'Sound' : 'Muted';
 window.addEventListener('keydown', (e) => {
   input.keys[e.code] = true;
   if (!G.running) return;
-  if (!$('garageOverlay').hidden) { if (e.code === 'Escape' || e.code === 'KeyV') closeGarage(); return; }
-  if (e.code === 'KeyV' && !G.paused) { openGarage(); return; }
+  if (!chasing()) return;
   if (e.code === 'KeyR') toggleHydraulics();
   else if (e.code === 'KeyH') toggleCamera();
   else if (e.code === 'KeyG') dropProbe();
+  else if (e.code === 'KeyF') toggleScan();
   else if (e.code === 'KeyC') G.view = (G.view + 1) % 4;
   else if (e.code === 'KeyP' || e.code === 'Escape') setPaused(!G.paused);
 });
@@ -1357,24 +1562,34 @@ function keyAxes() {
 // ---------------------------------------------------------------------------
 // Actions
 // ---------------------------------------------------------------------------
+const chasing = () => G.phase === 'calm' || G.phase === 'build' || G.phase === 'active';
+const canAct = () => G.running && !G.paused && chasing();
 function toggleHydraulics() {
-  if (!G.running || G.paused) return;
+  if (!canAct()) return;
   const h = G.hyd;
   if (h.state === HYD.DEPLOYING || h.state === HYD.RETRACTING) { toast('Hydraulics are still moving. Hang on!'); return; }
-  if (h.state === HYD.LOCKED) { h.state = HYD.RETRACTING; h.t = 0; AudioFX.hiss(); toast('Retracting: spikes up, skirts up, suspension up'); return; }
+  if (h.state === HYD.LOCKED) { h.state = HYD.RETRACTING; h.t = 0; G.scan = false; AudioFX.hiss(); toast('Retracting: spikes up, skirts up, suspension up'); return; }
   if (Math.abs(G.car.speed) > 3) { toast('Stop the truck first, then press Hydraulics'); AudioFX.beep(); return; }
   h.state = HYD.DEPLOYING; h.t = 0; G.car.speed = 0; AudioFX.hiss();
 }
 function toggleCamera() {
-  if (!G.running || G.paused) return;
+  if (!canAct()) return;
   G.rec = !G.rec; G.recT = 0;
   AudioFX.tone(G.rec ? 1200 : 500, 0.12, 0.2, 'square');
   toast(G.rec ? 'IMAX camera rolling' : 'Camera stopped', 1300);
 }
+function toggleScan() {
+  if (!canAct()) return;
+  if (!vstats().canScan) { toast('Only the Radar Truck can scan. Switch vehicles at base.'); AudioFX.beep(); return; }
+  if (!G.scan && G.hyd.state !== HYD.LOCKED) { toast('Lower the leveling jacks first: press Hydraulics'); AudioFX.beep(); return; }
+  G.scan = !G.scan;
+  AudioFX.tone(G.scan ? 900 : 400, 0.15, 0.2, 'sawtooth');
+  toast(G.scan ? 'Radar scanning. Keep the storm within 1 km.' : 'Radar stopped', 1500);
+}
 function dropProbe() {
-  if (!G.running || G.paused) return;
-  if (G.probes <= 0) { toast('Out of probes. You get 3 more with the next storm.'); AudioFX.beep(); return; }
-  G.probes--;
+  if (!canAct()) return;
+  if (career.probes <= 0) { toast('Out of probes. Buy more in the shop at base.'); AudioFX.beep(); return; }
+  career.probes--;
   const c = G.car;
   const m = new THREE.Group();
   const dome = new THREE.Mesh(new THREE.SphereGeometry(0.55, 14, 8, 0, TAU, 0, Math.PI / 2), lam(0xff8a1f)); m.add(dome);
@@ -1384,12 +1599,27 @@ function dropProbe() {
   scene.add(m);
   G.probeList.push({ m, light, hit: false, fly: null });
   AudioFX.clunk();
-  toast('Probe down! Get the tornado to run over it for bonus points.');
+  toast('Probe down! Get the tornado to run over it. Probes it misses come back to base.');
 }
 
 // ---------------------------------------------------------------------------
-// Storm cycle
+// Storm cycle: forecast at base → risk area → supercell with a track → tornado → paid for data
 // ---------------------------------------------------------------------------
+// spawn points sit on road crossings; on the map north is -z and east is +x
+const SPAWNS = [
+  { name: 'Town crossroads', x: 0, z: -40 },
+  { name: 'NW crossroads', x: -400, z: -400 },
+  { name: 'NE crossroads', x: 400, z: -400 },
+  { name: 'SW crossroads', x: -400, z: 400 },
+  { name: 'SE crossroads', x: 400, z: 400 }
+];
+const COMPASS = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
+function compass(yaw) {
+  const b = Math.atan2(Math.cos(yaw), -Math.sin(yaw)); // bearing clockwise from north
+  return COMPASS[(Math.round(b / (Math.PI / 4)) + 8) % 8];
+}
+const STRENGTH = ['weak (EF0–EF1)', 'weak (EF0–EF1)', 'strong (EF2–EF3)', 'strong (EF2–EF3)', 'violent (EF4–EF5)', 'violent (EF4–EF5)'];
+
 function pickEF() {
   const L = LEVELS[G.level];
   const w = [30, 26, 20, 13, 8, 4];
@@ -1398,38 +1628,73 @@ function pickEF() {
   for (let e = L.min; e <= L.max; e++) { r -= w[e]; if (r <= 0) return e; }
   return L.max;
 }
-function startBuilding() { G.phase = 'build'; G.phaseT = 12; G.probes = 3; G.stormScore = 0; G.stats = { closest: Infinity, intercept: false, probeHits: 0, rec: 0 }; toast('A supercell is forming. Get ready to chase!', 2600); AudioFX.thunder(); }
-function touchdown() {
+// where the tornado will touch down (gx, gz) and how it moves; the forecast risk area
+// is centred a little off the real spot so the radar still matters
+function planStorm() {
+  const gx = rnd(-WORLD + 220, WORLD - 220), gz = rnd(-WORLD + 220, WORLD - 220);
+  const ea = rnd(0, TAU), ed = rnd(40, 150);
+  G.plan = {
+    ef: pickEF(), gx, gz, dir: Math.atan2(-gz, -gx) + rnd(-0.6, 0.6), speed: rnd(7, 11),
+    risk: { x: gx + Math.cos(ea) * ed, z: gz + Math.sin(ea) * ed, r: 240 }
+  };
+}
+function deploy() {
+  const sp = SPAWNS[career.spawn] || SPAWNS[0];
   const c = G.car;
-  let x, z, tries = 0;
-  do {
-    const a = rnd(0, TAU), d = rnd(330, 560);
-    x = c.x + Math.cos(a) * d; z = c.z + Math.sin(a) * d; tries++;
-  } while ((Math.abs(x) > WORLD - 80 || Math.abs(z) > WORLD - 80) && tries < 40);
-  x = clamp(x, -WORLD + 80, WORLD - 80); z = clamp(z, -WORLD + 80, WORLD - 80);
-  Object.assign(T, { active: true, x, z, ef: pickEF(), inten: 0, age: 0, hitPlayer: false });
+  Object.assign(c, { x: sp.x, z: sp.z, h: Math.atan2(-sp.x, -sp.z), speed: 0, steer: 0, driftX: 0, driftZ: 0, lift: 0, spinV: 0 });
+  Object.assign(G.hyd, { state: HYD.RETRACTED, t: 0, susp: 0, skirt: 0, spike: 0 });
+  Object.assign(G, { rec: false, scan: false, stormScore: 0, phase: 'calm', phaseT: 12, storm: 0, cell: null, paused: false, _fuelWarn: false, _fuelOut: false });
+  G.stats = { closest: Infinity, intercept: false, probeHits: 0, rec: 0, scan: 0 };
+  T.active = false;
+  camPos.set(c.x - Math.sin(c.h) * 15, 7, c.z - Math.cos(c.h) * 15); lookSm.set(c.x, 2, c.z);
+  $('baseOverlay').hidden = true;
+  saveCareer();
+  toast(`Deployed at ${sp.name}. Head for the orange risk area on the radar.`, 3600);
+}
+function startBuilding() {
+  G.phase = 'build'; G.phaseT = BUILD_T;
+  toast(`A supercell is forming, moving ${compass(G.plan.dir)}. Get ahead of its track!`, 3200);
+  AudioFX.thunder();
+}
+function touchdown() {
+  const p = G.plan;
+  Object.assign(T, { active: true, x: p.gx, z: p.gz, ef: p.ef, inten: 0, age: 0, hitPlayer: false });
   T.R = 14 + T.ef * 7;
   T.life = rnd(85, 125) + T.ef * 8;
-  T.yaw = Math.atan2(c.z - z, c.x - x) + rnd(-0.6, 0.6);
-  T.yawVel = 0; T.speed = rnd(7, 11);
-  G.phase = 'active';
+  T.yaw = p.dir; T.yawVel = 0; T.speed = p.speed;
+  G.phase = 'active'; G.cell = null;
   AudioFX.siren();
-  banner(`Tornado warning! An EF${T.ef} has touched down`, 'warn', 3);
+  banner(`Tornado warning! An EF${T.ef} touched down, moving ${compass(T.yaw)}`, 'warn', 3);
+}
+// pay for the data collected; probes the tornado missed are picked up again
+function settle() {
+  T.active = false; G.cell = null; G.rec = false; G.scan = false;
+  const data = Math.max(0, Math.round(G.stormScore)), pay = Math.round(data * PAY_RATE);
+  let recovered = 0;
+  G.probeList.forEach((p) => { if (!p.hit) recovered++; scene.remove(p.m); });
+  G.probeList = [];
+  career.probes = Math.min(probeCap(), career.probes + recovered);
+  career.money += pay; career.dataTotal += data;
+  if (data > 0) career.storms++;
+  saveCareer();
+  return { data, pay, recovered };
 }
 function endStorm() {
-  T.active = false;
-  G.phase = 'calm'; G.phaseT = 22;
-  const stars = 1 + (G.stats.closest < T.R * 3 && G.stats.rec > 3 ? 1 : 0) + (G.stats.intercept ? 1 : 0);
-  $('summaryTitle').textContent = `The EF${T.ef} tornado roped out`;
+  const ef = T.ef, R = T.R, r = settle();
+  G.phase = 'done';
+  const s = G.stats;
+  const stars = 1 + (s.closest < R * 3 && (s.rec > 3 || s.scan > 3) ? 1 : 0) + (s.intercept ? 1 : 0);
+  $('summaryTitle').textContent = `The EF${ef} tornado roped out`;
   $('summaryStars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
   $('summaryList').innerHTML =
-    `<dt>Points this storm</dt><dd>${fmt(Math.max(0, G.stormScore))}</dd>` +
-    `<dt>Closest approach</dt><dd>${isFinite(G.stats.closest) ? fmt(G.stats.closest) + ' m' : '-'}</dd>` +
-    `<dt>Time filming</dt><dd>${fmt(G.stats.rec)} s</dd>` +
-    `<dt>Intercept</dt><dd>${G.stats.intercept ? 'Yes!' : 'Not yet'}</dd>` +
-    `<dt>Probes hit</dt><dd>${G.stats.probeHits}</dd>`;
+    `<dt>Data collected</dt><dd>${fmt(r.data)}</dd>` +
+    `<dt>Paid for your data</dt><dd>$${fmt(r.pay)}</dd>` +
+    `<dt>Closest approach</dt><dd>${isFinite(s.closest) ? fmt(s.closest) + ' m' : '-'}</dd>` +
+    `<dt>Time filming</dt><dd>${fmt(s.rec)} s</dd>` +
+    (s.scan > 0 ? `<dt>Radar scanning</dt><dd>${fmt(s.scan)} s</dd>` : '') +
+    `<dt>Intercept</dt><dd>${s.intercept ? 'Yes!' : 'Not yet'}</dd>` +
+    `<dt>Probes hit / picked up</dt><dd>${s.probeHits} / ${r.recovered}</dd>`;
   $('summaryOverlay').hidden = false;
-  G.paused = true;
   AudioFX.chime();
 }
 
@@ -1451,7 +1716,7 @@ function windAt(x, z) {
 
 function updateHydraulics(dt) {
   const h = G.hyd;
-  h.t += dt;
+  h.t += dt * vstats().hydro;
   const c01 = (v) => clamp(v, 0, 1);
   if (h.state === HYD.DEPLOYING) {
     h.susp = c01(h.t / 1.0); h.skirt = c01((h.t - 0.8) / 1.0); h.spike = c01((h.t - 1.6) / 1.4);
@@ -1472,8 +1737,8 @@ function updateCar(dt) {
   if (anchored) { thr = 0; if (Math.abs(input.throttle) > 0.5 || k.t) { if (!G._anchHint) { toast('Retract the hydraulics before you drive'); G._anchHint = 3; } } }
   if (G._anchHint) G._anchHint = Math.max(0, G._anchHint - dt);
 
-  const VH = VEHICLES[G.vehicle];
-  const MAXF = VH.maxF, MAXR = 8;
+  const VH = vstats();
+  const MAXF = G.fuel > 0 ? VH.maxF : 4, MAXR = 8; // an empty tank leaves you crawling
   if (thr > 0.05) c.speed += (c.speed < 0 ? 22 : 9) * thr * dt;
   else if (thr < -0.05) c.speed += (c.speed > 0 ? 22 : 6) * thr * dt;
   else c.speed -= Math.sign(c.speed) * Math.min(Math.abs(c.speed), 5 * dt);
@@ -1482,6 +1747,10 @@ function updateCar(dt) {
   c.steer = lerp(c.steer, steer, clamp(dt * 6, 0, 1));
   const turn = c.steer * 1.25 * clamp(Math.abs(c.speed) / 7, 0, 1) * Math.sign(c.speed || 1) * (1 - 0.35 * clamp(Math.abs(c.speed) / MAXF, 0, 1));
   c.h -= turn * dt;
+  // fuel burns with speed
+  if (Math.abs(c.speed) > 0.3) G.fuel = Math.max(0, G.fuel - Math.abs(c.speed) / VEHICLES[G.vehicle].maxF * FUEL_RATE * VH.fuelUse * dt);
+  if (G.fuel < 15 && !G._fuelWarn) { G._fuelWarn = true; banner('Low fuel! Pause and return to base to refuel.', 'warn', 2.6); }
+  if (G.fuel <= 0 && !G._fuelOut) { G._fuelOut = true; banner('Out of fuel! You can only crawl now.', 'warn', 2.6); }
 
   // tornado wind
   const w = windAt(c.x, c.z);
@@ -1521,12 +1790,14 @@ function updateCar(dt) {
 
 function repairTruck() {
   const c = G.car;
-  banner('Heavy damage! The crew towed you out and fixed the truck.', 'warn', 2.6);
-  addScore(-150);
+  const fee = Math.min(career.money, PRICE.tow);
+  career.money -= fee;
+  banner(`Heavy damage! The crew towed you out and patched the truck. Tow fee $${fmt(fee)}`, 'warn', 2.8);
+  G.scan = false;
   const a = T.active ? Math.atan2(c.z - T.z, c.x - T.x) : 0;
   c.x = clamp((T.active ? T.x : c.x) + Math.cos(a) * 320, -WORLD + 30, WORLD - 30);
   c.z = clamp((T.active ? T.z : c.z) + Math.sin(a) * 320, -WORLD + 30, WORLD - 30);
-  Object.assign(c, { speed: 0, driftX: 0, driftZ: 0, lift: 0, spinV: 0, armor: 100 });
+  Object.assign(c, { speed: 0, driftX: 0, driftZ: 0, lift: 0, spinV: 0, armor: 30 });
   Object.assign(G.hyd, { state: HYD.RETRACTED, t: 0, susp: 0, skirt: 0, spike: 0 });
 }
 
@@ -1597,30 +1868,50 @@ function updateProbes(dt, time) {
 
 let scoreTick = 0;
 function updateScoring(dt, w) {
-  if (!T.active || T.inten < 0.2) return;
   const c = G.car;
+  scoreTick += dt;
+  const tick = scoreTick >= 1;
+  if (tick) scoreTick -= 1;
+  // the radar works on the supercell before touchdown and on the tornado after;
+  // best from a few hundred meters, weak right under it or far away
+  if (G.scan) {
+    G.stats.scan += dt;
+    const tgt = T.active ? T : G.cell;
+    if (tick && tgt) {
+      const d = Math.hypot(c.x - tgt.x, c.z - tgt.z), m = T.active ? T.ef + 1 : 1;
+      let pts = 0;
+      if (!T.active) pts = d < 1200 ? 8 : 0;
+      else if (d < 80) pts = 6 * m; else if (d < 500) pts = 22 * m; else if (d < 1100) pts = 10 * m;
+      if (pts) addScore(pts);
+      else if (!G._scanHint) { toast('The storm is out of radar range. Get within 1 km.'); G._scanHint = 6; }
+    }
+  }
+  if (G._scanHint) G._scanHint = Math.max(0, G._scanHint - dt);
+  if (!T.active || T.inten < 0.2) return;
   const d = Math.hypot(c.x - T.x, c.z - T.z);
   G.stats.closest = Math.min(G.stats.closest, d);
   if (G.rec) G.stats.rec += dt;
-  scoreTick += dt;
-  if (scoreTick >= 1) {
-    scoreTick -= 1;
-    if (G.rec) {
-      const m = T.ef + 1;
-      if (d < T.R) addScore(30 * m); else if (d < T.R * 3) addScore(12 * m); else if (d < T.R * 8) addScore(4 * m);
-    }
+  if (tick && G.rec) {
+    const m = (T.ef + 1) * (career.lens ? 1.5 : 1);
+    if (d < T.R) addScore(30 * m); else if (d < T.R * 3) addScore(12 * m); else if (d < T.R * 8) addScore(4 * m);
   }
   if (!G.stats.intercept && G.hyd.state === HYD.LOCKED && d < T.R) {
     G.stats.intercept = true;
     const bonus = 500 * (T.ef + 1); addScore(bonus);
-    banner(`Intercept! The EF${T.ef} went right over you +${fmt(bonus)}`, 'good', 3); AudioFX.chime();
+    banner(`Intercept! The EF${T.ef} went right over you +${fmt(bonus)} data`, 'good', 3); AudioFX.chime();
     G.flashBonus = 1;
   }
 }
 
 function updatePhase(dt) {
   if (G.phase === 'calm') { G.phaseT -= dt; if (G.phaseT <= 0) startBuilding(); }
-  else if (G.phase === 'build') { G.phaseT -= dt; if (G.phaseT <= 0) touchdown(); }
+  else if (G.phase === 'build') {
+    G.phaseT -= dt;
+    // the supercell drifts along its track and reaches the touchdown point as the timer runs out
+    const p = G.plan, back = p.speed * Math.max(0, G.phaseT);
+    G.cell = { x: p.gx - Math.cos(p.dir) * back, z: p.gz - Math.sin(p.dir) * back };
+    if (G.phaseT <= 0) touchdown();
+  }
   const target = G.phase === 'calm' ? 0 : (G.phase === 'build' ? 0.85 : Math.max(0.85, T.inten));
   G.storm = lerp(G.storm, target, clamp(dt * 0.25, 0, 1));
   // lightning
@@ -1653,16 +1944,16 @@ function updateVisuals(dt, time, w) {
   truck.wheels.forEach((wh) => { wh.spin.rotation.x = wheelSpin / wh.r; if (wh.front) wh.steer.rotation.y = -c.steer * 0.45; });
   anemoSpin += dt * (2 + w.ms * 0.25); truck.anemo.rotation.y = anemoSpin;
   // turret follows the tornado while recording
-  let want = 0;
-  if (G.rec && T.active) want = Math.atan2(T.x - c.x, T.z - c.z) - c.h;
-  else want = Math.sin(time * 0.35) * 0.4;
+  let want = Math.sin(time * 0.35) * 0.4;
+  const aim = T.active ? T : G.cell;
+  if ((G.rec || G.scan) && aim) want = Math.atan2(aim.x - c.x, aim.z - c.z) - c.h + (G.scan ? Math.sin(time * 1.6) * 0.35 : 0);
   const cur = truck.turret.rotation.y;
   let dlt = want - cur; dlt = Math.atan2(Math.sin(dlt), Math.cos(dlt));
   truck.turret.rotation.y = cur + clamp(dlt, -1.4 * dt, 1.4 * dt);
 
   // camera
   const views = [{ d: 15, h: 6.5 }, { d: 9, h: 3.6 }, { d: 34, h: 30 }, { d: 10, h: 3.2, orbit: true }];
-  const v = views[G.view] || views[0];
+  const v = !G.running || G.phase === 'base' ? views[3] : (views[G.view] || views[0]);
   const fx = Math.sin(c.h), fz = Math.cos(c.h);
   // the last view slowly circles the truck so it can be admired from every side
   const oa = c.h + Math.PI + time * 0.35;
@@ -1673,9 +1964,10 @@ function updateVisuals(dt, time, w) {
   if (v.orbit) camLook.set(c.x, 1.6 + c.lift, c.z); else camLook.set(c.x + fx * 4, 1.8 + c.lift, c.z + fz * 4);
   // when a tornado is near, tilt the view toward it so the whole funnel is in frame
   if (T.active && !v.orbit && G.view !== 2) {
-    const d = Math.hypot(T.x - c.x, T.z - c.z);
-    const k = clamp(1 - d / 750, 0, 1) * 0.28 * T.inten;
-    funnelLook.set(T.x, 40 + T.ef * 6, T.z);
+    // lean toward a point 40 m out in the tornado's direction so the truck stays in frame
+    const dx = T.x - c.x, dz = T.z - c.z, d = Math.hypot(dx, dz) || 1;
+    const k = clamp(1 - d / 750, 0, 1) * 0.5 * T.inten;
+    funnelLook.set(c.x + dx / d * 40, 12 + T.ef * 2, c.z + dz / d * 40);
     camLook.lerp(funnelLook, k);
   }
   lookSm.lerp(camLook, clamp(dt * 3, 0, 1));
@@ -1714,29 +2006,60 @@ function updateVisuals(dt, time, w) {
 const rctx = el.radar.getContext('2d');
 let hudT = 0;
 function drawRadar() {
-  const W = el.radar.width, R0 = W / 2 - 6, c = G.car, range = 900;
+  const W = el.radar.width, R0 = W / 2 - 6, c = G.car;
+  const range = G.phase === 'active' ? 900 : 1500;
+  const scale = R0 / range, sh = Math.sin(c.h), ch = Math.cos(c.h);
   rctx.clearRect(0, 0, W, W);
   rctx.fillStyle = 'rgba(8, 20, 14, 0.85)'; rctx.beginPath(); rctx.arc(W / 2, W / 2, R0, 0, TAU); rctx.fill();
   rctx.strokeStyle = 'rgba(111, 227, 161, 0.35)'; rctx.lineWidth = 2;
   [1, 0.5].forEach((k) => { rctx.beginPath(); rctx.arc(W / 2, W / 2, R0 * k, 0, TAU); rctx.stroke(); });
   rctx.beginPath(); rctx.moveTo(W / 2, 6); rctx.lineTo(W / 2, W - 6); rctx.moveTo(6, W / 2); rctx.lineTo(W - 6, W / 2); rctx.stroke();
-  const toR = (x, z) => {
+  // world → radar, truck heading up
+  const raw = (x, z) => {
     const dx = x - c.x, dz = z - c.z;
-    const fwd = dx * Math.sin(c.h) + dz * Math.cos(c.h);
-    const right = -(dx * Math.cos(c.h) - dz * Math.sin(c.h));
-    let px = right / range * R0, py = -fwd / range * R0;
+    return [W / 2 - (dx * ch - dz * sh) * scale, W / 2 - (dx * sh + dz * ch) * scale];
+  };
+  const toR = (x, z) => {
+    let [px, py] = raw(x, z); px -= W / 2; py -= W / 2;
     const l = Math.hypot(px, py), clampd = l > R0 - 10;
     if (clampd) { px = px / l * (R0 - 10); py = py / l * (R0 - 10); }
     return [W / 2 + px, W / 2 + py, clampd];
   };
+  const edgeDot = (x, z, color) => { const [px, py, cl] = toR(x, z); if (cl) { rctx.fillStyle = color; rctx.beginPath(); rctx.arc(px, py, 7, 0, TAU); rctx.fill(); } };
+  rctx.save(); rctx.beginPath(); rctx.arc(W / 2, W / 2, R0, 0, TAU); rctx.clip();
+  // forecast risk area before the storm forms
+  if (G.phase === 'calm' && G.plan) {
+    const rk = G.plan.risk, [x, y] = raw(rk.x, rk.z);
+    rctx.fillStyle = 'rgba(255, 138, 31, 0.2)'; rctx.strokeStyle = '#ff8a1f'; rctx.setLineDash([8, 6]);
+    rctx.beginPath(); rctx.arc(x, y, rk.r * scale, 0, TAU); rctx.fill(); rctx.stroke(); rctx.setLineDash([]);
+  }
+  // the storm: reflectivity blob with the core ahead-left of the hook, plus its expected track
+  const src = T.active ? T : G.cell;
+  if (src && G.plan) {
+    const dir = T.active ? T.yaw : G.plan.dir, mx = Math.cos(dir), mz = Math.sin(dir);
+    const [x0, y0] = raw(src.x, src.z), [x1, y1] = raw(src.x + mx * 700, src.z + mz * 700);
+    const ang = Math.atan2(y1 - y0, x1 - x0);
+    const [cx, cy] = raw(src.x + mx * 90 + mz * 60, src.z + mz * 90 - mx * 60);
+    [[200, 120, 'rgba(60, 200, 90, 0.4)'], [130, 80, 'rgba(240, 220, 60, 0.5)'], [70, 45, 'rgba(240, 70, 50, 0.7)']].forEach(([a, b, col]) => {
+      rctx.fillStyle = col; rctx.beginPath(); rctx.ellipse(cx, cy, Math.max(4, a * scale), Math.max(3, b * scale), ang, 0, TAU); rctx.fill();
+    });
+    rctx.strokeStyle = 'rgba(255, 255, 255, 0.85)'; rctx.lineWidth = 3; rctx.setLineDash([10, 8]);
+    rctx.beginPath(); rctx.moveTo(x0, y0); rctx.lineTo(x1, y1); rctx.stroke(); rctx.setLineDash([]);
+    const hx = x1 - Math.cos(ang) * 14, hy = y1 - Math.sin(ang) * 14;
+    rctx.fillStyle = '#fff'; rctx.beginPath(); rctx.moveTo(x1, y1);
+    rctx.lineTo(hx + Math.sin(ang) * 8, hy - Math.cos(ang) * 8); rctx.lineTo(hx - Math.sin(ang) * 8, hy + Math.cos(ang) * 8); rctx.closePath(); rctx.fill();
+  }
+  rctx.restore();
+  if (G.phase === 'calm' && G.plan) edgeDot(G.plan.risk.x, G.plan.risk.z, '#ff8a1f');
+  if (G.cell) edgeDot(G.cell.x, G.cell.z, '#f0dc3c');
   G.probeList.forEach((p) => { const [x, y] = toR(p.m.position.x, p.m.position.z); rctx.fillStyle = p.hit ? '#6fe3a1' : '#ff8a1f'; rctx.fillRect(x - 4, y - 4, 8, 8); });
   if (T.active) {
-    const [x, y, cl] = toR(T.x, T.z);
-    if (!cl) { rctx.strokeStyle = 'rgba(255, 90, 80, 0.5)'; rctx.beginPath(); rctx.arc(x, y, Math.max(6, T.R * 3 / range * R0), 0, TAU); rctx.stroke(); }
+    const [x, y] = toR(T.x, T.z);
     rctx.fillStyle = '#ff5a50'; rctx.beginPath(); rctx.arc(x, y, 9, 0, TAU); rctx.fill();
     rctx.fillStyle = '#fff'; rctx.font = '600 18px Fredoka, "Trebuchet MS", sans-serif'; rctx.textAlign = 'center'; rctx.fillText('EF' + T.ef, x, y - 14);
   }
   rctx.fillStyle = '#f1f5f9'; rctx.beginPath(); rctx.moveTo(W / 2, W / 2 - 12); rctx.lineTo(W / 2 + 9, W / 2 + 9); rctx.lineTo(W / 2, W / 2 + 4); rctx.lineTo(W / 2 - 9, W / 2 + 9); rctx.closePath(); rctx.fill();
+  el.radarLabel.textContent = range >= 1000 ? 'RADAR 1.5 km' : 'RADAR 900 m';
 }
 function updateHUD(dt, w, time) {
   if (toastTimer > 0) { toastTimer -= dt; if (toastTimer <= 0) el.toast.hidden = true; }
@@ -1759,37 +2082,223 @@ function updateHUD(dt, w, time) {
     el.hydBar.style.width = ((h.state === HYD.DEPLOYING ? total : 1 - total) * 100) + '%';
   }
   el.btnCam.classList.toggle('on', G.rec);
+  el.btnScan.classList.toggle('on', G.scan);
+  el.btnScan.hidden = !vstats().canScan;
   el.recFrame.hidden = !G.rec;
   if (G.rec) { G.recT += dt; el.recDot.style.visibility = (time % 1) < 0.6 ? 'visible' : 'hidden'; el.recDot.textContent = '● REC ' + Math.floor(G.recT / 60) + ':' + String(Math.floor(G.recT % 60)).padStart(2, '0'); }
 
   if (hudT > 0) return;
   hudT = 0.12;
-  el.score.textContent = fmt(G.score);
-  el.best.textContent = 'Best ' + fmt(G.best);
+  el.score.textContent = '$' + fmt(career.money);
+  el.best.textContent = chasing() ? 'Data +' + fmt(G.stormScore) : `${fmt(career.storms)} storm${career.storms === 1 ? '' : 's'} chased`;
   el.armorBar.style.width = clamp(c.armor, 0, 100) + '%';
   el.armorBar.style.background = c.armor > 50 ? 'var(--good)' : c.armor > 25 ? 'var(--warn)' : 'var(--rec)';
   el.armorVal.textContent = Math.max(0, Math.round(c.armor)) + '%';
+  el.fuelBar.style.width = clamp(G.fuel, 0, 100) + '%';
+  el.fuelBar.style.background = G.fuel > 30 ? 'var(--warn)' : 'var(--rec)';
+  el.fuelVal.textContent = Math.ceil(G.fuel) + '%';
   const mph = w.ms * 2.237;
   el.windBar.style.width = clamp(mph / 230 * 100, 0, 100) + '%';
   el.windVal.textContent = Math.round(mph) + ' mph';
-  el.probeCount.textContent = G.probes + ' left';
+  el.probeCount.textContent = career.probes + ' left';
 
-  // status line + guide arrow
-  if (G.phase === 'calm') { el.status.className = 'panel calm'; el.status.textContent = `Clear skies. Next storm in ${Math.ceil(G.phaseT + 12)} s`; }
-  else if (G.phase === 'build') { el.status.className = 'panel build'; el.status.textContent = `Supercell forming. Touchdown in ${Math.ceil(G.phaseT)} s`; }
+  // status line + guide arrow toward the risk area, the supercell or the tornado
+  const p = G.plan;
+  if (G.phase === 'calm') { el.status.className = 'panel calm'; el.status.textContent = `Forecast: storms expected in the orange risk area. Supercell in ${Math.ceil(G.phaseT)} s`; }
+  else if (G.phase === 'build') { el.status.className = 'panel build'; el.status.textContent = `Supercell moving ${compass(p.dir)} at ${Math.round(p.speed * 2.237)} mph. Touchdown in ${Math.ceil(G.phaseT)} s`; }
   else if (T.active) { el.status.className = 'panel alert'; el.status.textContent = `TORNADO WARNING  EF${T.ef}  winds up to ${Math.round(EF_MS[T.ef] * 2.237)} mph`; }
-  if (T.active) {
-    const d = Math.hypot(T.x - c.x, T.z - c.z);
-    const ang = Math.atan2(T.x - c.x, T.z - c.z) - c.h;
+  else { el.status.className = 'panel calm'; el.status.textContent = G.phase === 'done' ? 'The storm is over. Head back to base.' : 'At base. Plan your next chase.'; }
+  let target = null, label = '';
+  if (T.active) target = T;
+  else if (G.phase === 'build' && G.cell) { target = G.cell; label = 'Storm cell'; }
+  else if (G.phase === 'calm' && p) { target = p.risk; label = 'Risk area'; }
+  if (target) {
+    const d = Math.hypot(target.x - c.x, target.z - c.z);
+    const ang = Math.atan2(target.x - c.x, target.z - c.z) - c.h;
     el.guide.hidden = false;
     el.guideArrow.style.transform = `rotate(${-ang}rad)`;
-    el.guideText.textContent = d < T.R ? 'You are in the core!' : `Tornado ${fmt(d)} m`;
-    const close = d < T.R * 10 && h.state === HYD.RETRACTED;
-    if (close && bannerLock <= 0) banner('Tornado close! Stop and press Hydraulics', 'warn', 0);
-    else if (!close) hideBanner();
+    if (T.active) {
+      el.guideText.textContent = d < T.R ? 'You are in the core!' : `Tornado ${fmt(d)} m`;
+      const close = d < T.R * 10 && h.state === HYD.RETRACTED;
+      if (close && bannerLock <= 0) banner('Tornado close! Stop and press Hydraulics', 'warn', 0);
+      else if (!close) hideBanner();
+    } else {
+      el.guideText.textContent = label === 'Risk area' && d < p.risk.r ? 'Inside the risk area' : `${label} ${fmt(d)} m`;
+      hideBanner();
+    }
   } else { el.guide.hidden = true; hideBanner(); }
   drawRadar();
 }
+
+// ---------------------------------------------------------------------------
+// Base: forecast and spawn point, garage and customization, shop
+// ---------------------------------------------------------------------------
+let baseTab = 'forecast';
+function baseMsg(text) { $('baseMsg').textContent = text || ''; }
+function spend(cost) {
+  if (career.money < cost) { baseMsg(`Not enough money: that costs $${fmt(cost)}.`); AudioFX.beep(); return false; }
+  career.money -= cost; AudioFX.tone(1320, 0.1, 0.18, 'sine'); return true;
+}
+function openBase(note) {
+  Object.assign(G, { phase: 'base', paused: false, rec: false, scan: false, cell: null, storm: 0 });
+  T.active = false;
+  Object.assign(G.hyd, { state: HYD.RETRACTED, t: 0, susp: 0, skirt: 0, spike: 0 });
+  Object.assign(G.car, { speed: 0, steer: 0, driftX: 0, driftZ: 0, lift: 0, spinV: 0 });
+  input.throttle = input.steer = 0;
+  ['pauseOverlay', 'summaryOverlay'].forEach((id) => { $(id).hidden = true; });
+  saveCareer();
+  planStorm();
+  renderBase();
+  baseMsg(note);
+  $('baseOverlay').hidden = false;
+}
+function setBaseTab(t) {
+  baseTab = t;
+  document.querySelectorAll('#baseTabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+  ['forecast', 'garage', 'shop'].forEach((k) => { $('tab-' + k).hidden = k !== t; });
+}
+document.querySelectorAll('#baseTabs button').forEach((b) => b.addEventListener('click', () => setBaseTab(b.dataset.tab)));
+
+const MAP_PAD = 26;
+const mapXY = (x, z, S) => [MAP_PAD + (x + WORLD) / (2 * WORLD) * (S - 2 * MAP_PAD), MAP_PAD + (z + WORLD) / (2 * WORLD) * (S - 2 * MAP_PAD)];
+function drawMap() {
+  const cv = $('mapCanvas'), g = cv.getContext('2d'), S = cv.width, k = (S - 2 * MAP_PAD) / (2 * WORLD), p = G.plan;
+  g.fillStyle = '#132a1c'; g.fillRect(0, 0, S, S);
+  g.strokeStyle = '#4a5560'; g.lineWidth = 6;
+  ROADS.forEach((v) => {
+    const [a] = mapXY(v, 0, S), [, b] = mapXY(0, v, S);
+    g.beginPath(); g.moveTo(a, MAP_PAD); g.lineTo(a, S - MAP_PAD); g.moveTo(MAP_PAD, b); g.lineTo(S - MAP_PAD, b); g.stroke();
+  });
+  // risk area and the expected motion
+  const [rx, ry] = mapXY(p.risk.x, p.risk.z, S);
+  g.fillStyle = 'rgba(255, 138, 31, 0.28)'; g.strokeStyle = '#ff8a1f'; g.lineWidth = 3; g.setLineDash([10, 7]);
+  g.beginPath(); g.arc(rx, ry, p.risk.r * k, 0, TAU); g.fill(); g.stroke(); g.setLineDash([]);
+  const ax = rx + Math.cos(p.dir) * 380 * k, ay = ry + Math.sin(p.dir) * 380 * k;
+  g.strokeStyle = '#fff'; g.lineWidth = 4; g.beginPath(); g.moveTo(rx, ry); g.lineTo(ax, ay); g.stroke();
+  const an = Math.atan2(ay - ry, ax - rx);
+  g.fillStyle = '#fff'; g.beginPath(); g.moveTo(ax + Math.cos(an) * 10, ay + Math.sin(an) * 10);
+  g.lineTo(ax + Math.cos(an + 2.4) * 14, ay + Math.sin(an + 2.4) * 14); g.lineTo(ax + Math.cos(an - 2.4) * 14, ay + Math.sin(an - 2.4) * 14); g.closePath(); g.fill();
+  // spawn points
+  g.font = '600 18px Fredoka, "Trebuchet MS", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  SPAWNS.forEach((sp, i) => {
+    const [x, y] = mapXY(sp.x, sp.z, S), on = i === career.spawn;
+    g.fillStyle = on ? '#ff8a1f' : '#0d1116'; g.strokeStyle = on ? '#fff' : '#9db0c2'; g.lineWidth = 3;
+    g.beginPath(); g.arc(x, y, on ? 16 : 13, 0, TAU); g.fill(); g.stroke();
+    g.fillStyle = on ? '#1b1006' : '#f1f5f9'; g.fillText(String(i + 1), x, y + 1);
+  });
+  g.fillStyle = '#f1f5f9'; g.font = '600 16px Fredoka, "Trebuchet MS", sans-serif'; g.fillText('N ↑', S - 30, 18);
+}
+function renderForecast() {
+  const p = G.plan;
+  $('forecastText').textContent = `A supercell is expected to form in the orange risk area and move ${compass(p.dir)} at about ${Math.round(p.speed * 2.237)} mph. Expected strength: ${STRENGTH[p.ef]}. Pick a spawn point ahead of the storm's path.`;
+  const seg = $('spawnSeg'); seg.innerHTML = '';
+  SPAWNS.forEach((sp, i) => {
+    const d = Math.max(0, Math.hypot(sp.x - p.risk.x, sp.z - p.risk.z) - p.risk.r);
+    const b = document.createElement('button');
+    b.setAttribute('aria-pressed', String(i === career.spawn));
+    b.innerHTML = `${i + 1}. ${sp.name}<small>${d < 1 ? 'Inside the risk area' : fmt(d) + ' m from the risk area'}</small>`;
+    b.addEventListener('click', () => { career.spawn = i; renderBase(); });
+    seg.appendChild(b);
+  });
+  drawMap();
+}
+$('mapCanvas').addEventListener('click', (e) => {
+  const cv = $('mapCanvas'), r = cv.getBoundingClientRect(), S = cv.width;
+  const px = (e.clientX - r.left) / r.width * S, py = (e.clientY - r.top) / r.height * S;
+  let best = -1, bd = 40;
+  SPAWNS.forEach((sp, i) => { const [x, y] = mapXY(sp.x, sp.z, S), d = Math.hypot(x - px, y - py); if (d < bd) { bd = d; best = i; } });
+  if (best >= 0) { career.spawn = best; renderBase(); }
+});
+
+const vehButtons = [];
+VEHICLES.forEach((v, i) => {
+  const b = document.createElement('button');
+  b.innerHTML = `<span class="veh-name">${v.name}</span><small class="veh-stats">${v.stats}</small>`;
+  b.addEventListener('click', () => { if (G.vehicle !== i) { setVehicle(i); baseMsg(`${v.name} is ready.`); } renderBase(); });
+  $('vehSeg').appendChild(b); vehButtons.push([b, i]);
+});
+function renderGarage() {
+  vehButtons.forEach(([b, i]) => b.setAttribute('aria-pressed', String(i === G.vehicle)));
+  const v = VEHICLES[G.vehicle], s = vehicleState(v), st = vstats();
+  $('vehStatus').innerHTML = `<span>Armor <b>${Math.round(G.car.armor)}%</b></span><span>Fuel <b>${Math.ceil(G.fuel)}%</b></span><span>Top speed <b>${Math.round(st.maxF * 2.237)} mph</b></span>` + (v.canScan ? '<span><b>Can scan storms</b></span>' : '');
+  const sw = $('paintRow'); sw.innerHTML = '';
+  PAINTS.forEach((pt, i) => {
+    const b = document.createElement('button'); b.className = 'swatch';
+    const hex = pt.hex == null ? v.paint[0][2] : pt.hex;
+    b.style.background = '#' + hex.toString(16).padStart(6, '0');
+    b.setAttribute('aria-pressed', String(i === s.paint));
+    b.setAttribute('aria-label', `${pt.name}${i === s.paint ? ' (current)' : pt.hex == null ? ' (free)' : ` $${PRICE.paint}`}`);
+    b.title = b.getAttribute('aria-label');
+    b.addEventListener('click', () => {
+      if (i === s.paint) return;
+      if (pt.hex != null && !spend(PRICE.paint)) return;
+      s.paint = i; applyPaint(v, i); saveCareer(); baseMsg(`Painted ${pt.name.toLowerCase()}.`); renderBase();
+    });
+    sw.appendChild(b);
+  });
+  $('upgradeList').innerHTML = '';
+  UPGRADES.forEach((u) => {
+    const lvl = s[u.key], max = u.cost.length, cost = u.cost[lvl];
+    const row = shopRow(`${u.name} <span class="lvl">${'■'.repeat(lvl)}${'□'.repeat(max - lvl)}</span>`, u.desc,
+      lvl >= max ? 'Maxed' : `Upgrade $${fmt(cost)}`, lvl >= max, () => {
+        if (!spend(cost)) return;
+        s[u.key]++; saveCareer(); baseMsg(`${u.name} upgraded to level ${s[u.key]}.`); renderBase();
+      });
+    $('upgradeList').appendChild(row);
+  });
+}
+function shopRow(title, desc, label, disabled, onBuy) {
+  const row = document.createElement('div'); row.className = 'shop-row';
+  row.innerHTML = `<div><b>${title}</b><small>${desc}</small></div>`;
+  const b = document.createElement('button'); b.className = 'buy'; b.textContent = label; b.disabled = disabled;
+  b.addEventListener('click', onBuy); row.appendChild(b);
+  return row;
+}
+function renderShop() {
+  const list = $('shopList'); list.innerHTML = '';
+  const fuelNeed = 100 - G.fuel, fuelCost = Math.ceil(fuelNeed * PRICE.fuel);
+  list.appendChild(shopRow(`Fuel ${Math.ceil(G.fuel)}%`, `$${PRICE.fuel} per 1%. Fills what you can afford.`, fuelNeed < 0.5 ? 'Full' : `Fill up $${fmt(fuelCost)}`, fuelNeed < 0.5, () => {
+    const add = Math.min(fuelNeed, career.money / PRICE.fuel);
+    if (add < 0.5) { spend(fuelCost); return; }
+    career.money -= Math.ceil(add * PRICE.fuel); G.fuel = Math.min(100, G.fuel + add); saveCareer(); baseMsg('Tank filled.'); renderBase();
+  }));
+  const armNeed = 100 - G.car.armor, armCost = Math.ceil(armNeed * PRICE.repair);
+  list.appendChild(shopRow(`Repair ${Math.round(G.car.armor)}%`, `$${PRICE.repair} per 1% of armor. Fixes what you can afford.`, armNeed < 0.5 ? 'Like new' : `Repair $${fmt(armCost)}`, armNeed < 0.5, () => {
+    const add = Math.min(armNeed, career.money / PRICE.repair);
+    if (add < 0.5) { spend(armCost); return; }
+    career.money -= Math.ceil(add * PRICE.repair); G.car.armor = Math.min(100, G.car.armor + add); saveCareer(); baseMsg('Repaired.'); renderBase();
+  }));
+  const cap = probeCap();
+  list.appendChild(shopRow(`Probe ${career.probes}/${cap}`, 'Drop it in the tornado\'s path for a big data bonus. Missed probes come back.', career.probes >= cap ? 'Rack full' : `Buy one $${PRICE.probe}`, career.probes >= cap, () => {
+    if (!spend(PRICE.probe)) return; career.probes++; saveCareer(); baseMsg('Probe loaded.'); renderBase();
+  }));
+  list.appendChild(shopRow('Probe rack', 'Carry 6 probes instead of 3.', career.rack ? 'Owned' : `Buy $${fmt(PRICE.rack)}`, !!career.rack, () => {
+    if (!spend(PRICE.rack)) return; career.rack = 1; saveCareer(); baseMsg('Probe rack fitted: room for 6 probes.'); renderBase();
+  }));
+  list.appendChild(shopRow('IMAX lens', 'Filming earns 50% more data.', career.lens ? 'Owned' : `Buy $${fmt(PRICE.lens)}`, !!career.lens, () => {
+    if (!spend(PRICE.lens)) return; career.lens = 1; saveCareer(); baseMsg('IMAX lens fitted.'); renderBase();
+  }));
+  $('payInfo').textContent = `Data is paid at $${PAY_RATE.toFixed(2)} per point. Lifetime data: ${fmt(career.dataTotal)}.`;
+}
+function renderBase() {
+  $('baseMoney').textContent = '$' + fmt(career.money);
+  renderForecast(); renderGarage(); renderShop();
+  const sp = SPAWNS[career.spawn] || SPAWNS[0];
+  $('btnDeploy').textContent = `Deploy to ${sp.name}`;
+  const warn = [];
+  if (G.fuel < 25) warn.push('fuel is low');
+  if (G.car.armor < 40) warn.push('armor is damaged');
+  $('baseWarn').textContent = warn.length ? `Heads up: ${warn.join(' and ')}. Visit the shop.` : '';
+  setBaseTab(baseTab);
+}
+press($('btnDeploy'), () => deploy());
+press($('btnReset'), () => {
+  if (!window.confirm('Start over? Money, upgrades and paint will be reset.')) return;
+  career = JSON.parse(JSON.stringify(CAREER_START));
+  VEHICLES.forEach((v) => applyPaint(v, 0));
+  const i = G.vehicle; truck && scene.remove(truck.root); truck = null; setVehicle(i);
+  store.set('tiv2-career', career); baseMsg('Fresh start.'); renderBase();
+});
 
 // ---------------------------------------------------------------------------
 // Loop, pause, start
@@ -1803,26 +2312,21 @@ window.addEventListener('resize', resize);
 resize();
 
 function setPaused(p) {
-  if (!G.running) return;
+  if (!G.running || !chasing()) return;
   G.paused = p;
   $('pauseOverlay').hidden = !p;
   if (p) { input.throttle = input.steer = 0; }
 }
-document.addEventListener('visibilitychange', () => { if (document.hidden && G.running && !G.paused) setPaused(true); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && G.running && !G.paused) setPaused(true);
+  if (document.hidden && G.running) saveCareer();
+});
 press($('btnResume'), () => setPaused(false));
-press($('btnRestart'), () => { $('pauseOverlay').hidden = true; resetGame(); G.paused = false; });
-function closeSummary() { $('summaryOverlay').hidden = true; G.paused = false; G.probeList.forEach((p) => scene.remove(p.m)); G.probeList = []; }
-press($('btnNext'), () => closeSummary());
-press($('btnSumGarage'), () => { closeSummary(); openGarage(); });
-
-function resetGame() {
-  Object.assign(G.car, { x: 0, z: -40, h: 0, speed: 0, steer: 0, driftX: 0, driftZ: 0, lift: 0, spinV: 0, armor: 100 });
-  Object.assign(G.hyd, { state: HYD.RETRACTED, t: 0, susp: 0, skirt: 0, spike: 0 });
-  G.score = 0; G.stormScore = 0; G.phase = 'calm'; G.phaseT = 14; G.rec = false; G.probes = 3;
-  G.probeList.forEach((p) => scene.remove(p.m)); G.probeList = [];
-  T.active = false;
-  camPos.set(0, 8, -60); lookSm.set(0, 2, 0);
-}
+press($('btnReturn'), () => {
+  const r = settle();
+  openBase(r.data > 0 ? `Back at base. You were paid $${fmt(r.pay)} for ${fmt(r.data)} data.` : 'Back at base.');
+});
+press($('btnNext'), () => openBase());
 
 document.querySelectorAll('#levelSeg button').forEach((b) => {
   b.setAttribute('aria-pressed', String(Number(b.dataset.level) === G.level));
@@ -1831,37 +2335,11 @@ document.querySelectorAll('#levelSeg button').forEach((b) => {
     document.querySelectorAll('#levelSeg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
   });
 });
-
-// vehicle pickers on the start card and in the garage
-const vehButtons = [];
-document.querySelectorAll('.veh-seg').forEach((seg) => {
-  VEHICLES.forEach((v, i) => {
-    const b = document.createElement('button');
-    b.innerHTML = `<span class="veh-name">${v.name}</span><small class="veh-stats">${v.stats}</small>`;
-    b.addEventListener('click', () => {
-      if (G.vehicle !== i) { setVehicle(i); if (G.running) toast(`${v.name} ready to chase`, 1600); }
-      syncVehButtons();
-    });
-    seg.appendChild(b); vehButtons.push([b, i]);
-  });
-});
-function syncVehButtons() { vehButtons.forEach(([b, i]) => b.setAttribute('aria-pressed', String(i === G.vehicle))); }
-syncVehButtons();
-function openGarage() {
-  if (!G.running) return;
-  G.paused = true; input.throttle = input.steer = 0;
-  $('pauseOverlay').hidden = true;
-  syncVehButtons();
-  $('garageOverlay').hidden = false;
-}
-function closeGarage() { $('garageOverlay').hidden = true; G.paused = false; }
-press($('btnGarage'), () => { if ($('summaryOverlay').hidden) openGarage(); });
-press($('btnGarageClose'), () => closeGarage());
 $('btnStart').addEventListener('click', () => {
   AudioFX.init(); if (AudioFX.ctx && AudioFX.ctx.state === 'suspended') AudioFX.ctx.resume();
   $('startOverlay').hidden = true;
-  resetGame(); G.running = true; G.paused = false;
-  toast('Drag the joystick to drive. Wait for the storm, then follow the orange arrow.', 4200);
+  G.running = true;
+  openBase(career.storms ? `Welcome back. You have $${fmt(career.money)}.` : 'Welcome to base! Read the forecast, pick a spawn point, then deploy.');
   try { if (navigator.wakeLock) navigator.wakeLock.request('screen').catch(() => {}); } catch (e) { /* not available */ }
 });
 
@@ -1872,7 +2350,9 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   const time = (now - clock0) / 1000;
   let w = windAt(G.car.x, G.car.z);
-  if (G.running && !G.paused) {
+  const sim = G.running && !G.paused && chasing();
+  const showroom = !G.running || G.phase === 'base';
+  if (sim) {
     updatePhase(dt);
     updateTornado(dt);
     updateHydraulics(dt);
@@ -1880,12 +2360,13 @@ function frame(now) {
     updateBales(dt);
     updateProbes(dt, time);
     updateScoring(dt, w);
-  } else if (!G.running) {
-    // attract mode behind the start card: slow orbit around the truck
+  } else if (showroom) {
+    // behind the start card and the base screen: slow turn so the vehicle can be admired
     G.car.h += dt * 0.15;
   }
-  updateTornadoVisuals(G.paused ? 0 : dt, time);
-  updateVisuals(G.paused ? 0 : dt, time, w);
+  const vdt = sim || showroom ? dt : 0;
+  updateTornadoVisuals(vdt, time);
+  updateVisuals(vdt, time, w);
   updateHUD(dt, w, time);
   const nearWind = T.active ? clamp(1 - w.xr / 12, 0, 1) * T.inten : 0;
   AudioFX.update(G.car.speed, nearWind, G.storm);

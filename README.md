@@ -2,19 +2,31 @@
 
 A 3D storm chasing game that runs in any modern browser, made for tablets.
 
-Drive the armored TIV2 out to the tornado, park in its path, deploy the hydraulics
-(suspension down, skirts down, spikes in) and film it with the IMAX camera.
-Let the tornado pass right over the truck for the intercept bonus.
+## How a chase works
+
+1. **Base:** read the forecast map (orange risk area and the storm's expected direction),
+   pick a spawn point, choose your vehicle, refuel, repair and buy gear.
+2. **Radar:** after you deploy, the radar shows the risk area, then the supercell with a dashed
+   line for its expected track. Get ahead of it before the tornado touches down.
+3. **Collect data:** park, press Hydraulics to lock down, then film with the camera, drop probes
+   in its path, scan with the Radar Truck, or let the tornado pass right over you.
+4. **Get paid:** data is paid at $0.50 per point when the tornado ropes out (or when you return
+   to base early). Spend it on fuel, repairs, probes, upgrades and paint, then chase the next storm.
+
+Fuel burns while you drive, damage stays until you repair it, and if your armor runs out the crew
+tows you out for a $250 fee. Progress is saved in the browser.
 
 ## Vehicles
 
-Pick a vehicle on the start screen, or switch any time from the **Car** button (or V) in the garage.
-
-| Vehicle | Top speed | Armor |
+| Vehicle | Top speed | Notes |
 |---|---|---|
-| TIV2 | 58 mph | Heavy: takes the least damage and wind shove |
-| Joker 1 | 69 mph | Lighter: faster, but the core hurts more |
-| Joker 2 | 51 mph | Heaviest: slow, but shrugs off wind and debris |
+| TIV2 | 58 mph | Heavy armor |
+| Joker 1 | 69 mph | Fastest, lighter armor |
+| Joker 2 | 51 mph | Slowest, heaviest armor |
+| Radar Truck | 60 mph | The only vehicle that can scan storms; light armor |
+
+Every vehicle locks down with hydraulics that drive spikes or jacks into the ground. In the
+garage each vehicle can be painted and upgraded (engine, armor plating, fuel tank, hydraulics).
 
 ## Play
 
@@ -25,10 +37,11 @@ Open the GitHub Pages link for this repository. Turn the tablet sideways for the
 | Touch | Keyboard | Action |
 |---|---|---|
 | Left joystick | Arrows / WASD | Drive |
-| Hydraulics | R | Lock the truck to the ground (stop first) |
-| Camera | H | Film the tornado for points |
+| Hydraulics | R | Lock the vehicle to the ground (stop first) |
+| Camera | H | Film the tornado for data |
 | Probe | G | Drop a probe in the tornado's path |
+| Scan | F | Radar scan (Radar Truck, locked down) |
 | View | C | Change camera view |
-| Car | V | Open the garage to change vehicle |
+| Pause | P / Esc | Pause, or return to base |
 
 Built with [three.js](https://threejs.org/) as a single `index.html`, no build step.
