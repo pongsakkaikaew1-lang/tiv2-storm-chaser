@@ -32,6 +32,17 @@ have a tiny wind field, and wedges are huge. Cones and sidewinders earn more dat
 pay the most for probes. Stovepipes can grow into cones or wedges, drillbits often start as
 multi-vortex, and every tornado ropes out before it dies.
 
+## Radar
+
+The small radar and the full radar map (**M** or tap the radar) follow the Twisted wiki: base
+reflectivity (dBZ) and base velocity (red away from the radar, green toward it) on a blocky grid
+with the hook echo, the weak-echo "eye" and a debris ball for strong tornadoes; rotation, TVS
+(colored by estimated winds: green, yellow, orange, red, pink) and hail icons; lightning; and severe
+thunderstorm, tornado and PDS warning polygons. The KHZL Doppler station updates every 4 s; the
+Radar Truck's mobile radar (while scanning) updates every second with more accurate wind estimates
+but only reaches about 1 km. A violent tornado near KHZL knocks it offline until the next storm.
+The map's tornado panel shows type, estimated EF, winds, path length, max width and buildings hit.
+
 ## Vehicles
 
 | Vehicle | Top speed | Holds when locked | Notes |
@@ -74,6 +85,7 @@ attaches it to a new release. `android-app/` holds the app's launcher icons, spl
 | Probe | G | Drop a probe in the tornado's path |
 | Scan | F | Radar scan (Radar Truck, locked down) |
 | View | C | Change camera view |
+| Radar | M | Open the radar map |
 | Pause | P / Esc | Pause, or return to base |
 
 Built with [three.js](https://threejs.org/) r128 (`vendor/`) as a single `index.html`, no build step.

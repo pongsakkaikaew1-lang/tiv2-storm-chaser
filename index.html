@@ -57,7 +57,15 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
 /* top row */
 .top { position: absolute; left: 0; right: 0; top: env(safe-area-inset-top, 0px); padding: 12px 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; pointer-events: none; }
 .top > * { pointer-events: auto; }
-#radarWrap { padding: 8px; display: grid; gap: 4px; justify-items: center; }
+#radarWrap { padding: 8px; display: grid; gap: 4px; justify-items: center; cursor: pointer; }
+.radar-card { width: min(1040px, 100%); gap: 12px; }
+.radar-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+#radarMap { width: 100%; height: auto; aspect-ratio: 1; border-radius: 12px; display: block; }
+.radar-side { display: grid; gap: 12px; }
+.legend-row { display: flex; gap: 12px; align-items: flex-start; }
+#radarLegend { width: 80px; height: 260px; flex: none; background: rgba(0,0,0,0.25); border-radius: 10px; }
+#radarInfo { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 0; }
+.seg button:disabled { opacity: 0.45; cursor: default; }
 #radar { width: 132px; height: 132px; display: block; }
 #radarLabel { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
 .center-col { flex: 1; display: grid; justify-items: center; gap: 8px; min-width: 0; }
@@ -187,6 +195,7 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
   #btnHyd { width: 98px; height: 98px; }
   #hydProgress { top: 62%; }
   .fc-grid { grid-template-columns: 1fr; }
+  .radar-grid { grid-template-columns: 1fr; }
 }
 @media (orientation: landscape) { #rotateHint { display: none; } }
 @media (prefers-reduced-motion: reduce) { #guideArrow, .bar > i { transition: none; } }
@@ -276,7 +285,7 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
   <div id="pauseOverlay" class="overlay" hidden>
     <div class="card panel">
       <h1>Paused</h1>
-      <p>Drive with the joystick on the left. Park in the tornado's path, press Hydraulics, then Camera (or Scan in the Radar Truck) to collect data. Return to base to get paid for what you have so far. Keyboard: arrows or WASD to drive, R hydraulics, H camera, G probe, C camera view, F radar scan, P pause.</p>
+      <p>Drive with the joystick on the left. Park in the tornado's path, press Hydraulics, then Camera (or Scan in the Radar Truck) to collect data. Return to base to get paid for what you have so far. Keyboard: arrows or WASD to drive, R hydraulics, H camera, G probe, C camera view, F radar scan, M radar map, P pause.</p>
       <div class="row">
         <button id="btnResume" class="go">Resume</button>
         <button id="btnReturn" class="ghost">Return to base</button>
@@ -330,6 +339,30 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
       <p id="baseMsg" role="status"></p>
       <p id="baseWarn"></p>
       <button id="btnDeploy" class="go">Deploy</button>
+    </div>
+  </div>
+
+  <div id="radarOverlay" class="overlay" hidden>
+    <div class="card panel radar-card">
+      <div class="base-head"><h1>Radar</h1><button id="btnRadarClose" class="ghost">Close (M)</button></div>
+      <div class="radar-grid">
+        <canvas id="radarMap" width="720" height="720" aria-label="Radar map"></canvas>
+        <div class="radar-side">
+          <div id="productSeg" class="seg" role="group" aria-label="Radar product">
+            <button data-prod="refl">Reflectivity<small>dBZ</small></button>
+            <button data-prod="vel">Velocity<small>mph</small></button>
+          </div>
+          <div id="siteSeg" class="seg" role="group" aria-label="Radar source">
+            <button data-site="station">KHZL<small>Doppler station</small></button>
+            <button data-site="mobile">Mobile<small>Radar Truck</small></button>
+          </div>
+          <div class="legend-row">
+            <canvas id="radarLegend" width="80" height="260" aria-label="Color legend"></canvas>
+            <p id="radarInfo"></p>
+          </div>
+          <div id="tornadoDetails" hidden></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -704,6 +737,21 @@ for (let i = 0; i < 26; i++) {
   scene.add(poles, bars);
 }
 
+// KHZL Doppler radar tower in the corner of the plains; a violent tornado can knock its dome off
+const radarBulb = (() => {
+  const g = new THREE.Group(), x = -690, z = -700;
+  const legs = lam(0xb7bcc2), dome = lam(0xf4f5f2);
+  [[-2, -2], [2, -2], [2, 2], [-2, 2]].forEach(([a, b]) => { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.4, 26, 0.4), legs); leg.position.set(a * 0.8, 13, b * 0.8); leg.rotation.set(b * 0.03, 0, -a * 0.03); g.add(leg); });
+  for (let y = 4; y < 26; y += 5.5) { const ring = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.25, 3.6), legs); ring.position.y = y; g.add(ring); }
+  const deckM = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 4.6, 0.8, 16), legs); deckM.position.y = 26.4; g.add(deckM);
+  const hut = new THREE.Mesh(new THREE.BoxGeometry(6, 3.2, 4), lam(0xe9e1d2)); hut.position.set(7, 1.6, 0); g.add(hut);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(5.6, 24, 16), dome); bulb.position.y = 31.6; g.add(bulb);
+  g.position.set(x, 0, z); shadows(g, true, true); scene.add(g);
+  obstacles.push({ x, z, r: 4 }, { x: x + 7, z, r: 4 });
+  return bulb;
+})();
+const FARMS = obstacles.filter((o) => o.r >= 7); // buildings a tornado can hit
+
 // hay bales: the tornado picks these up and spins them around
 const hayGeo = new THREE.CylinderGeometry(0.9, 0.9, 1.3, 12);
 const bales = [];
@@ -787,6 +835,7 @@ function strike(cx, cz) {
     p = q;
   }
   bolt.visible = true; boltT = 0.22;
+  RAD.strikes.push({ x: p.x, z: p.z, t: 25 });
 }
 
 // ---------------------------------------------------------------------------
@@ -1586,6 +1635,7 @@ const G = {
   stats: { closest: Infinity, intercept: false, probeHits: 0, rec: 0, scan: 0 }
 };
 const T = {
+  path: 0, maxW: 0, hits: new Set(),
   active: false, x: 0, z: 0, ef: 0, R: 20, R0: 20, H: 300, inten: 0, age: 0, life: 90, yaw: 0, yawVel: 0, speed: 9, hitPlayer: false,
   type: 'cone', prevType: 'cone', type0: 'cone', blend: 1, morphTo: null, morphAt: 0, roped: false, ground: 1, touchAt: 0, subs: [], subA: 0, subK: 0
 };
@@ -1949,6 +1999,7 @@ window.addEventListener('keydown', (e) => {
   else if (e.code === 'KeyH') toggleCamera();
   else if (e.code === 'KeyG') dropProbe();
   else if (e.code === 'KeyF') toggleScan();
+  else if (e.code === 'KeyM') setRadarOpen(!RAD.open);
   else if (e.code === 'KeyC') G.view = (G.view + 1) % 4;
   else if (e.code === 'KeyP' || e.code === 'Escape') setPaused(!G.paused);
 });
@@ -2072,6 +2123,7 @@ function touchdown() {
   T.morphAt = T.life * rnd(0.3, 0.45);
   T.ground = TORNADO_TYPES[start].floats ? 0 : 1; T.touchAt = rnd(15, 30);
   T.R = T.R0 * TORNADO_TYPES[start].wind;
+  T.path = 0; T.maxW = 0; T.hits = new Set(); RAD.peak = 0; RAD.t = 0;
   G.phase = 'active'; G.cell = null;
   AudioFX.siren();
   const name = TORNADO_TYPES[start].name.toLowerCase();
@@ -2111,7 +2163,10 @@ function endStorm() {
     `<dt>Time filming</dt><dd>${fmt(s.rec)} s</dd>` +
     (s.scan > 0 ? `<dt>Radar scanning</dt><dd>${fmt(s.scan)} s</dd>` : '') +
     `<dt>Intercept</dt><dd>${s.intercept ? 'Yes!' : 'Not yet'}</dd>` +
-    `<dt>Probes hit / picked up</dt><dd>${s.probeHits} / ${r.recovered}</dd>`;
+    `<dt>Probes hit / picked up</dt><dd>${s.probeHits} / ${r.recovered}</dd>` +
+    `<dt>Peak radar winds</dt><dd>${RAD.peak ? Math.round(RAD.peak) + ' mph' : '-'}</dd>` +
+    `<dt>Path length / max width</dt><dd>${(T.path / 1609).toFixed(2)} mi / ${fmt(T.maxW * 3.281)} ft</dd>` +
+    `<dt>Buildings hit</dt><dd>${T.hits.size}</dd>`;
   $('summaryOverlay').hidden = false;
   AudioFX.chime();
 }
@@ -2270,6 +2325,10 @@ function updateTornado(dt) {
   }
   T.x += Math.cos(T.yaw) * T.speed * dt;
   T.z += Math.sin(T.yaw) * T.speed * dt;
+  // the record the radar's tornado panel shows
+  T.path += T.speed * dt;
+  if (T.ground > 0.5) T.maxW = Math.max(T.maxW, 2 * T.R * T.inten);
+  FARMS.forEach((o, k) => { if (!T.hits.has(k) && T.inten > 0.3 && T.ground > 0.5 && Math.hypot(o.x - T.x, o.z - T.z) < T.R + o.r) T.hits.add(k); });
 }
 
 function updateBales(dt) {
@@ -2479,62 +2538,289 @@ function updateVisuals(dt, time, w) {
 // ---------------------------------------------------------------------------
 const rctx = el.radar.getContext('2d');
 let hudT = 0;
+// ---------------------------------------------------------------------------
+// Doppler radar, after the Twisted wiki: the KHZL station or the Radar Truck's mobile radar,
+// reflectivity and velocity products on a blocky grid, rotation / TVS / hail icons, lightning,
+// warning polygons, and a station that a violent tornado can knock offline
+// ---------------------------------------------------------------------------
+const RAD = {
+  N: 96, product: store.get('tiv2-radar-product', 'refl'), site: 'station',
+  station: { name: 'KHZL', x: -690, z: -700, online: true },
+  refl: document.createElement('canvas'), vel: document.createElement('canvas'),
+  t: 0, age: 0, used: null, est: 0, peak: 0, strikes: [], open: false
+};
+RAD.refl.width = RAD.refl.height = RAD.vel.width = RAD.vel.height = RAD.N;
+const RCELL = 2 * WORLD / RAD.N;
+function colorRamp(stops) {
+  const P = stops.map(([v, h]) => [v, parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+  return (v) => {
+    if (v <= P[0][0]) return P[0].slice(1);
+    for (let i = 1; i < P.length; i++) {
+      const a = P[i - 1], b = P[i];
+      if (v <= b[0]) { const t = (v - a[0]) / (b[0] - a[0]); return [a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t, a[3] + (b[3] - a[3]) * t]; }
+    }
+    return P[P.length - 1].slice(1);
+  };
+}
+const REFL_STOPS = [[-10, '#3b2fb8'], [0, '#7a86e0'], [5, '#7fb87a'], [10, '#1e8c1e'], [20, '#9fd38a'], [25, '#f2ec9a'], [30, '#e8c84a'], [40, '#dca23a'], [50, '#9a7350'], [60, '#c42a2a'], [65, '#ff1a1a'], [70, '#b00000'], [80, '#1a0000']];
+const VEL_STOPS = [[-180, '#4a1fc0'], [-140, '#3a5fe0'], [-120, '#0b6b2a'], [-80, '#119a3a'], [-40, '#7cc77c'], [-10, '#d8e6d0'], [0, '#e8e8e0'], [10, '#f0e0a0'], [40, '#e8b830'], [80, '#9a6a40'], [120, '#a83a3a'], [140, '#d01830'], [180, '#ff2020']];
+const REFL_RAMP = colorRamp(REFL_STOPS), VEL_RAMP = colorRamp(VEL_STOPS);
+
+// the storm in its own frame: f metres ahead along its motion, l metres to its left
+function stormFrame() {
+  const src = T.active ? T : G.cell;
+  if (!src || !G.plan) return null;
+  const dir = T.active ? T.yaw : G.plan.dir;
+  const k = T.active ? 1 : clamp(1 - G.phaseT / BUILD_T, 0, 1) * 0.65 + 0.35;
+  return { x: src.x, z: src.z, mx: Math.cos(dir), mz: Math.sin(dir), k };
+}
+const cellNoise = (i, j, s) => { const v = Math.sin(i * 127.1 + j * 311.7 + s * 74.7) * 43758.5453; return v - Math.floor(v); };
+function dbzAt(x, z, S, seed, i, j) {
+  const dx = x - S.x, dz = z - S.z;
+  const f = dx * S.mx + dz * S.mz, l = dx * S.mz - dz * S.mx;
+  // forward-flank rain stretched ahead of the storm, and the core with hail
+  let v = 50 * Math.exp(-((f - 150) ** 2) / (340 * 340) - ((l - 90) ** 2) / (200 * 200));
+  v += 20 * Math.exp(-((f - 110) ** 2 + (l - 70) ** 2) / (90 * 90));
+  // hook echo wrapping from the left side around behind the updraft
+  const r = Math.hypot(dx, dz), rh = Math.max(T.active ? T.R * 1.6 : 0, 70);
+  let a = Math.atan2(l, f); if (a < 0) a += TAU;
+  if (a > Math.PI / 2 && a < 4.2) {
+    const along = (a - Math.PI / 2) / (4.2 - Math.PI / 2);
+    v = Math.max(v, 46 * (1 - along * 0.7) * Math.exp(-(((r - rh) / (rh * 0.45)) ** 2)));
+  }
+  if (T.active) {
+    v *= 1 - 0.7 * Math.exp(-(r * r) / ((rh * 0.7) ** 2)); // weak echo "eye" inside the hook
+    if (T.ef >= 3) v = Math.max(v, 68 * T.inten * Math.exp(-(r * r) / ((T.R * 0.8) ** 2))); // debris ball
+  }
+  return v * S.k + (cellNoise(i, j, seed) - 0.5) * 8;
+}
+function velAt(x, z, S, rx, rz) {
+  const dx = x - S.x, dz = z - S.z, r = Math.max(Math.hypot(dx, dz), 1);
+  const Rc = T.active ? Math.max(T.R, 40) : 130, vmax = T.active ? EF_MS[T.ef] * T.inten * 0.85 : 24 * S.k;
+  const vt = r < Rc ? vmax * r / Rc : vmax * Math.pow(Rc / r, 0.7);
+  const ox = dx / r, oz = dz / r;
+  const wx = -oz * vt - ox * vt * 0.3 + S.mx * 12, wz = ox * vt - oz * vt * 0.3 + S.mz * 12;
+  const px = x - rx, pz = z - rz, pr = Math.max(Math.hypot(px, pz), 1);
+  return (wx * px + wz * pz) / pr * 2.237; // mph, positive = moving away from the radar
+}
+const mobileReady = () => vstats().canScan && G.scan;
+function radarSite() {
+  if (RAD.site === 'mobile' && mobileReady()) return { name: 'Mobile radar', x: G.car.x, z: G.car.z, range: 1000, mobile: true };
+  return { name: RAD.station.name, x: RAD.station.x, z: RAD.station.z, range: Infinity, mobile: false };
+}
+function radarRefresh() {
+  const site = radarSite();
+  if (!site.mobile && !RAD.station.online) return; // an offline station keeps its last picture
+  const S = stormFrame(), seed = Math.random() * 100, N = RAD.N;
+  const rg = RAD.refl.getContext('2d'), vg = RAD.vel.getContext('2d');
+  const ri = rg.createImageData(N, N), vi = vg.createImageData(N, N);
+  if (S) {
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      const x = -WORLD + (i + 0.5) * RCELL, z = -WORLD + (j + 0.5) * RCELL;
+      if (site.mobile && Math.hypot(x - site.x, z - site.z) > site.range) continue;
+      const v = dbzAt(x, z, S, seed, i, j);
+      if (v < 8) continue;
+      const k = (j * N + i) * 4, c = REFL_RAMP(v), vc = VEL_RAMP(velAt(x, z, S, site.x, site.z));
+      ri.data[k] = c[0]; ri.data[k + 1] = c[1]; ri.data[k + 2] = c[2]; ri.data[k + 3] = 205;
+      vi.data[k] = vc[0]; vi.data[k + 1] = vc[1]; vi.data[k + 2] = vc[2]; vi.data[k + 3] = 205;
+    }
+  }
+  rg.putImageData(ri, 0, 0); vg.putImageData(vi, 0, 0);
+  RAD.age = 0; RAD.used = site;
+  // the TVS shows estimated winds: rough from the station, close to the truth from a mobile radar
+  if (T.active) {
+    const real = EF_MS[T.ef] * T.inten * lerp(0.5, 1, T.ground) * 2.237;
+    RAD.est = real * (site.mobile ? rnd(0.94, 1.04) : rnd(0.78, 1.12));
+    RAD.peak = Math.max(RAD.peak, RAD.est);
+  } else RAD.est = 0;
+}
+function radarTick(dt) {
+  RAD.age += dt; RAD.t -= dt;
+  if (RAD.t <= 0) { RAD.t = RAD.site === 'mobile' && mobileReady() ? 1.2 : 4; radarRefresh(); }
+  RAD.strikes = RAD.strikes.filter((s) => (s.t -= dt) > 0);
+  // a violent tornado passing close to the station takes it offline
+  const st = RAD.station;
+  if (st.online && T.active && EF_MS[T.ef] * T.inten * 2.237 >= 150 && Math.hypot(T.x - st.x, T.z - st.z) < T.R * 2.5 + 15) {
+    st.online = false; radarBulb.visible = false;
+    banner(`The tornado hit the ${st.name} radar! It is offline and shows its last scan.`, 'warn', 3);
+  }
+}
+function radarRestore() { RAD.station.online = true; radarBulb.visible = true; RAD.peak = 0; RAD.t = 0; }
+
+// estimated winds → TVS color, as on the wiki's list
+function tvsColor(mph) { return mph < 80 ? '#3ad25a' : mph < 100 ? '#f2dc2a' : mph < 120 ? '#ff9a1f' : mph < 140 ? '#ff2a2a' : '#ff3fd2'; }
+function efFromMph(mph) { return mph < 86 ? 0 : mph < 111 ? 1 : mph < 136 ? 2 : mph < 166 ? 3 : mph < 201 ? 4 : 5; }
+// warning polygons in the storm's frame: [ahead, half width] at the back and at the front
+function warningPolygon(S) {
+  const quad = T.active ? [[-120, 150], [1000, 430]] : [[-260, 380], [900, 420]];
+  const lx = S.mz, lz = -S.mx, pt = (f, l) => [S.x + S.mx * f + lx * l, S.z + S.mz * f + lz * l];
+  return [pt(quad[0][0], quad[0][1]), pt(quad[1][0], quad[1][1]), pt(quad[1][0], -quad[1][1]), pt(quad[0][0], -quad[0][1])];
+}
+// draws the product image, warnings and icons; P(x, z) maps the world to the canvas, px is pixels per metre
+function drawRadarLayers(g, P, px, opts) {
+  const S = stormFrame();
+  // product image: the grid canvas placed with the same transform as the world
+  const [ox, oy] = P(-WORLD, -WORLD), [ax, ay] = P(-WORLD + RCELL, -WORLD), [bx, by] = P(-WORLD, -WORLD + RCELL);
+  g.save(); g.imageSmoothingEnabled = false;
+  g.setTransform(...opts.base, 0, 0); // keep the canvas' own scale (devicePixelRatio is not used here)
+  g.transform(ax - ox, ay - oy, bx - ox, by - oy, ox, oy);
+  g.drawImage(RAD.product === 'vel' ? RAD.vel : RAD.refl, 0, 0);
+  g.restore();
+  // forecast risk area, then the storm's expected track
+  if (G.phase === 'calm' && G.plan) {
+    const rk = G.plan.risk, [x, y] = P(rk.x, rk.z);
+    g.fillStyle = 'rgba(255, 138, 31, 0.18)'; g.strokeStyle = '#ff8a1f'; g.lineWidth = 2; g.setLineDash([8, 6]);
+    g.beginPath(); g.arc(x, y, rk.r * px, 0, TAU); g.fill(); g.stroke(); g.setLineDash([]);
+  }
+  if (S) {
+    // warnings: severe thunderstorm before touchdown, tornado after, PDS for violent ones
+    const poly = warningPolygon(S).map(([x, z]) => P(x, z));
+    const pds = T.active && (T.ef >= 4 || RAD.est >= 170);
+    g.beginPath(); poly.forEach(([x, y], k) => (k ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath();
+    g.fillStyle = T.active ? (pds ? 'rgba(255, 63, 210, 0.12)' : 'rgba(255, 40, 40, 0.1)') : 'rgba(255, 220, 40, 0.08)';
+    g.fill();
+    g.lineWidth = pds ? 4 : 2; g.strokeStyle = T.active ? (pds ? '#ff3fd2' : '#ff2a2a') : '#f2dc2a'; g.stroke();
+    if (pds) { g.lineWidth = 1.5; g.strokeStyle = '#000'; g.stroke(); }
+    // expected track
+    const dir = T.active ? T.yaw : G.plan.dir, [x0, y0] = P(S.x, S.z), [x1, y1] = P(S.x + Math.cos(dir) * 700, S.z + Math.sin(dir) * 700);
+    g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 2; g.setLineDash([8, 7]);
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); g.setLineDash([]);
+  }
+  const ic = opts.icon;
+  // lightning
+  RAD.strikes.forEach((s) => {
+    const [x, y] = P(s.x, s.z);
+    g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 1.5; g.beginPath();
+    g.moveTo(x + 2 * ic, y - 8 * ic); g.lineTo(x - 3 * ic, y + 1 * ic); g.lineTo(x, y + 1 * ic); g.lineTo(x - 2 * ic, y + 8 * ic); g.lineTo(x + 3 * ic, y - 1 * ic); g.lineTo(x, y - 1 * ic); g.closePath();
+    g.fill(); g.stroke();
+  });
+  if (S) {
+    // hail: green triangle with a black outline and the hail size in inches
+    const hailIn = Math.round((0.6 + (T.active ? T.ef : 1) * 0.55) * S.k * 10) / 10;
+    if (S.k > 0.6 && hailIn >= 0.75) {
+      const [x, y] = P(S.x + S.mx * 110 + S.mz * 70, S.z + S.mz * 110 - S.mx * 70), r = 11 * ic;
+      g.fillStyle = '#2fd24f'; g.strokeStyle = '#000'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(x, y - r); g.lineTo(x + r * 0.95, y + r * 0.7); g.lineTo(x - r * 0.95, y + r * 0.7); g.closePath(); g.fill(); g.stroke();
+      if (hailIn >= 1) { g.fillStyle = '#000'; g.font = `700 ${Math.round(10 * ic)}px Nunito, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(Math.floor(hailIn)), x, y + r * 0.15); }
+    }
+    const [x, y] = P(S.x, S.z), r = 12 * ic;
+    if (T.active && RAD.est >= 35) {
+      // tornado vortex signature: a downward triangle colored by the estimated winds
+      g.lineWidth = 3.5 * ic; g.strokeStyle = tvsColor(RAD.est); g.fillStyle = 'rgba(0,0,0,0.25)';
+      g.beginPath(); g.moveTo(x, y + r); g.lineTo(x + r, y - r * 0.75); g.lineTo(x - r, y - r * 0.75); g.closePath(); g.fill(); g.stroke();
+      g.lineWidth = 1.2; g.strokeStyle = '#000'; g.stroke();
+    } else if (T.active || (G.phase === 'build' && S.k > 0.6)) {
+      // rotation: two green arrows chasing each other
+      g.strokeStyle = '#2fe060'; g.lineWidth = 3.5 * ic;
+      [0, Math.PI].forEach((a0) => {
+        g.beginPath(); g.arc(x, y, r * 0.8, a0 + 0.3, a0 + 2.6); g.stroke();
+        const ex = x + Math.cos(a0 + 2.6) * r * 0.8, ey = y + Math.sin(a0 + 2.6) * r * 0.8, t = a0 + 2.6 + Math.PI / 2;
+        g.fillStyle = '#2fe060'; g.beginPath(); g.moveTo(ex + Math.cos(t) * 6 * ic, ey + Math.sin(t) * 6 * ic);
+        g.lineTo(ex + Math.cos(t + 2.4) * 6 * ic, ey + Math.sin(t + 2.4) * 6 * ic); g.lineTo(ex + Math.cos(t - 2.4) * 6 * ic, ey + Math.sin(t - 2.4) * 6 * ic); g.closePath(); g.fill();
+      });
+    }
+  }
+  // station and mobile radar, probes
+  const st = RAD.station, [sx, sy] = P(st.x, st.z), using = RAD.used && !RAD.used.mobile;
+  g.lineWidth = 3; g.strokeStyle = !st.online ? '#ff3b3b' : using ? '#3ad25a' : '#9aa3ab'; g.fillStyle = 'rgba(13,17,22,0.8)';
+  g.beginPath(); g.arc(sx, sy, 9 * ic, 0, TAU); g.fill(); g.stroke();
+  if (opts.labels) { g.fillStyle = '#f1f5f9'; g.font = '600 15px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillText(st.online ? st.name : st.name + ' OFFLINE', sx, sy - 14); }
+  if (RAD.used && RAD.used.mobile) {
+    const [mx, my] = P(RAD.used.x, RAD.used.z);
+    g.strokeStyle = 'rgba(90, 160, 255, 0.7)'; g.setLineDash([5, 5]); g.lineWidth = 1.5;
+    g.beginPath(); g.arc(mx, my, RAD.used.range * px, 0, TAU); g.stroke(); g.setLineDash([]);
+  }
+  G.probeList.forEach((p) => { const [x, y] = P(p.m.position.x, p.m.position.z); g.fillStyle = p.hit ? '#6fe3a1' : '#ff8a1f'; g.fillRect(x - 4 * ic, y - 4 * ic, 8 * ic, 8 * ic); });
+}
 function drawRadar() {
   const W = el.radar.width, R0 = W / 2 - 6, c = G.car;
-  const range = G.phase === 'active' ? 900 : 1500;
-  const scale = R0 / range, sh = Math.sin(c.h), ch = Math.cos(c.h);
+  const range = G.phase === 'active' ? 900 : 1500, s = R0 / range, sh = Math.sin(c.h), ch = Math.cos(c.h);
+  const P = (x, z) => { const dx = x - c.x, dz = z - c.z; return [W / 2 + (-ch * dx + sh * dz) * s, W / 2 + (-sh * dx - ch * dz) * s]; };
+  rctx.setTransform(1, 0, 0, 1, 0, 0);
   rctx.clearRect(0, 0, W, W);
-  rctx.fillStyle = 'rgba(8, 20, 14, 0.85)'; rctx.beginPath(); rctx.arc(W / 2, W / 2, R0, 0, TAU); rctx.fill();
+  rctx.fillStyle = 'rgba(8, 20, 14, 0.88)'; rctx.beginPath(); rctx.arc(W / 2, W / 2, R0, 0, TAU); rctx.fill();
+  rctx.save(); rctx.beginPath(); rctx.arc(W / 2, W / 2, R0, 0, TAU); rctx.clip();
+  drawRadarLayers(rctx, P, s, { base: [1, 0, 0, 1], icon: 1.15 });
+  rctx.restore();
   rctx.strokeStyle = 'rgba(111, 227, 161, 0.35)'; rctx.lineWidth = 2;
   [1, 0.5].forEach((k) => { rctx.beginPath(); rctx.arc(W / 2, W / 2, R0 * k, 0, TAU); rctx.stroke(); });
-  rctx.beginPath(); rctx.moveTo(W / 2, 6); rctx.lineTo(W / 2, W - 6); rctx.moveTo(6, W / 2); rctx.lineTo(W - 6, W / 2); rctx.stroke();
-  // world → radar, truck heading up
-  const raw = (x, z) => {
-    const dx = x - c.x, dz = z - c.z;
-    return [W / 2 - (dx * ch - dz * sh) * scale, W / 2 - (dx * sh + dz * ch) * scale];
+  // things outside the radar range show as dots on the rim
+  const rim = (x, z, color) => {
+    let [px, py] = P(x, z); px -= W / 2; py -= W / 2; const l = Math.hypot(px, py);
+    if (l > R0 - 10) { rctx.fillStyle = color; rctx.beginPath(); rctx.arc(W / 2 + px / l * (R0 - 10), W / 2 + py / l * (R0 - 10), 7, 0, TAU); rctx.fill(); }
   };
-  const toR = (x, z) => {
-    let [px, py] = raw(x, z); px -= W / 2; py -= W / 2;
-    const l = Math.hypot(px, py), clampd = l > R0 - 10;
-    if (clampd) { px = px / l * (R0 - 10); py = py / l * (R0 - 10); }
-    return [W / 2 + px, W / 2 + py, clampd];
-  };
-  const edgeDot = (x, z, color) => { const [px, py, cl] = toR(x, z); if (cl) { rctx.fillStyle = color; rctx.beginPath(); rctx.arc(px, py, 7, 0, TAU); rctx.fill(); } };
-  rctx.save(); rctx.beginPath(); rctx.arc(W / 2, W / 2, R0, 0, TAU); rctx.clip();
-  // forecast risk area before the storm forms
-  if (G.phase === 'calm' && G.plan) {
-    const rk = G.plan.risk, [x, y] = raw(rk.x, rk.z);
-    rctx.fillStyle = 'rgba(255, 138, 31, 0.2)'; rctx.strokeStyle = '#ff8a1f'; rctx.setLineDash([8, 6]);
-    rctx.beginPath(); rctx.arc(x, y, rk.r * scale, 0, TAU); rctx.fill(); rctx.stroke(); rctx.setLineDash([]);
-  }
-  // the storm: reflectivity blob with the core ahead-left of the hook, plus its expected track
-  const src = T.active ? T : G.cell;
-  if (src && G.plan) {
-    const dir = T.active ? T.yaw : G.plan.dir, mx = Math.cos(dir), mz = Math.sin(dir);
-    const [x0, y0] = raw(src.x, src.z), [x1, y1] = raw(src.x + mx * 700, src.z + mz * 700);
-    const ang = Math.atan2(y1 - y0, x1 - x0);
-    const [cx, cy] = raw(src.x + mx * 90 + mz * 60, src.z + mz * 90 - mx * 60);
-    [[200, 120, 'rgba(60, 200, 90, 0.4)'], [130, 80, 'rgba(240, 220, 60, 0.5)'], [70, 45, 'rgba(240, 70, 50, 0.7)']].forEach(([a, b, col]) => {
-      rctx.fillStyle = col; rctx.beginPath(); rctx.ellipse(cx, cy, Math.max(4, a * scale), Math.max(3, b * scale), ang, 0, TAU); rctx.fill();
-    });
-    rctx.strokeStyle = 'rgba(255, 255, 255, 0.85)'; rctx.lineWidth = 3; rctx.setLineDash([10, 8]);
-    rctx.beginPath(); rctx.moveTo(x0, y0); rctx.lineTo(x1, y1); rctx.stroke(); rctx.setLineDash([]);
-    const hx = x1 - Math.cos(ang) * 14, hy = y1 - Math.sin(ang) * 14;
-    rctx.fillStyle = '#fff'; rctx.beginPath(); rctx.moveTo(x1, y1);
-    rctx.lineTo(hx + Math.sin(ang) * 8, hy - Math.cos(ang) * 8); rctx.lineTo(hx - Math.sin(ang) * 8, hy + Math.cos(ang) * 8); rctx.closePath(); rctx.fill();
-  }
-  rctx.restore();
-  if (G.phase === 'calm' && G.plan) edgeDot(G.plan.risk.x, G.plan.risk.z, '#ff8a1f');
-  if (G.cell) edgeDot(G.cell.x, G.cell.z, '#f0dc3c');
-  G.probeList.forEach((p) => { const [x, y] = toR(p.m.position.x, p.m.position.z); rctx.fillStyle = p.hit ? '#6fe3a1' : '#ff8a1f'; rctx.fillRect(x - 4, y - 4, 8, 8); });
-  if (T.active) {
-    const [x, y] = toR(T.x, T.z);
-    rctx.fillStyle = '#ff5a50'; rctx.beginPath(); rctx.arc(x, y, 9, 0, TAU); rctx.fill();
-    rctx.fillStyle = '#fff'; rctx.font = '600 18px Fredoka, "Trebuchet MS", sans-serif'; rctx.textAlign = 'center'; rctx.fillText('EF' + T.ef, x, y - 14);
-  }
+  if (G.phase === 'calm' && G.plan) rim(G.plan.risk.x, G.plan.risk.z, '#ff8a1f');
+  if (G.cell) rim(G.cell.x, G.cell.z, '#f0dc3c');
+  if (T.active) rim(T.x, T.z, '#ff5a50');
   rctx.fillStyle = '#f1f5f9'; rctx.beginPath(); rctx.moveTo(W / 2, W / 2 - 12); rctx.lineTo(W / 2 + 9, W / 2 + 9); rctx.lineTo(W / 2, W / 2 + 4); rctx.lineTo(W / 2 - 9, W / 2 + 9); rctx.closePath(); rctx.fill();
-  el.radarLabel.textContent = range >= 1000 ? 'RADAR 1.5 km' : 'RADAR 900 m';
+  const site = RAD.used ? (RAD.used.mobile ? 'MOBILE' : RAD.station.online ? RAD.station.name : RAD.station.name + ' OFF') : RAD.station.name;
+  el.radarLabel.textContent = `${site} ${RAD.product === 'vel' ? 'VEL' : 'REF'} ${range >= 1000 ? '1.5 km' : '900 m'}`;
+  if (RAD.open) drawRadarMap();
 }
+
+// full-screen radar map: north up, the whole plains
+function drawRadarMap() {
+  const cv = $('radarMap'), g = cv.getContext('2d'), S = cv.width, pad = 14, k = (S - 2 * pad) / (2 * WORLD);
+  const P = (x, z) => [pad + (x + WORLD) * k, pad + (z + WORLD) * k];
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.fillStyle = '#16231a'; g.fillRect(0, 0, S, S);
+  g.strokeStyle = '#3c4650'; g.lineWidth = 4;
+  ROADS.forEach((v) => { const [a] = P(v, 0), [, b] = P(0, v); g.beginPath(); g.moveTo(a, pad); g.lineTo(a, S - pad); g.moveTo(pad, b); g.lineTo(S - pad, b); g.stroke(); });
+  g.fillStyle = 'rgba(241,245,249,0.75)'; g.font = '600 13px Nunito, sans-serif'; g.textAlign = 'left';
+  SPAWNS.forEach((sp) => { const [x, y] = P(sp.x, sp.z); g.fillText(sp.name, x + 6, y - 6); });
+  drawRadarLayers(g, P, k, { base: [1, 0, 0, 1], icon: 1.25, labels: true });
+  // the player, heading as an arrow
+  const c = G.car, [x, y] = P(c.x, c.z), f = [Math.sin(c.h), Math.cos(c.h)];
+  const pt = (a, d) => [x + (f[0] * Math.cos(a) - f[1] * Math.sin(a)) * d, y + (f[1] * Math.cos(a) + f[0] * Math.sin(a)) * d];
+  g.fillStyle = '#ffffff'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath();
+  [[0, 14], [2.5, 11], [Math.PI, 4], [-2.5, 11]].forEach(([a, d], i) => { const [px, py] = pt(a, d); i ? g.lineTo(px, py) : g.moveTo(px, py); });
+  g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#f1f5f9'; g.font = '600 16px Fredoka, sans-serif'; g.textAlign = 'right'; g.fillText('N ↑', S - 12, 26);
+  renderRadarSide();
+}
+function drawLegend() {
+  const cv = $('radarLegend'), g = cv.getContext('2d'), H = cv.height, stops = RAD.product === 'vel' ? VEL_STOPS : REFL_STOPS;
+  const lo = stops[0][0], hi = stops[stops.length - 1][0], ramp = RAD.product === 'vel' ? VEL_RAMP : REFL_RAMP;
+  g.clearRect(0, 0, cv.width, H);
+  for (let y = 0; y < H - 16; y++) { const v = hi - (hi - lo) * y / (H - 17); const [r, gg, b] = ramp(v); g.fillStyle = `rgb(${r | 0},${gg | 0},${b | 0})`; g.fillRect(4, y + 8, 30, 1); }
+  g.fillStyle = '#f1f5f9'; g.font = '600 13px Nunito, sans-serif'; g.textAlign = 'left'; g.textBaseline = 'middle';
+  const step = RAD.product === 'vel' ? 40 : 10;
+  for (let v = hi; v >= lo; v -= step) g.fillText(String(v), 40, 8 + (hi - v) / (hi - lo) * (H - 17));
+}
+function renderRadarSide() {
+  document.querySelectorAll('#productSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.prod === RAD.product)));
+  const mob = $('siteSeg').querySelector('[data-site="mobile"]');
+  document.querySelectorAll('#siteSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.site === RAD.site)));
+  mob.disabled = !vstats().canScan;
+  const st = RAD.station, used = RAD.used;
+  let info = `${RAD.product === 'vel' ? 'Base velocity: red moves away from the radar, green toward it.' : 'Base reflectivity (dBZ): the hotter the color, the heavier the rain and hail.'} `;
+  if (RAD.site === 'mobile' && !mobileReady()) info += vstats().canScan ? 'The mobile radar needs the truck locked down and scanning (Scan button). ' : 'Mobile radar needs the Radar Truck. ';
+  info += used ? `Showing ${used.mobile ? 'the mobile radar' : st.name}${!used.mobile && !st.online ? ' (OFFLINE, last scan)' : ''}, updated ${Math.round(RAD.age)} s ago.` : '';
+  $('radarInfo').textContent = info;
+  drawLegend();
+  // tornado details, like the game's tornado panel
+  const d = $('tornadoDetails');
+  if (T.active || T.path > 0) {
+    const est = Math.round(T.active ? RAD.est : RAD.peak);
+    d.hidden = false;
+    d.innerHTML = `<h2 class="sub">Tornado details</h2><dl class="sum-list">` +
+      `<dt>Type</dt><dd>${TORNADO_TYPES[T.type0].name}</dd>` +
+      `<dt>EF rating (estimated)</dt><dd>EF${efFromMph(RAD.peak || est)}</dd>` +
+      `<dt>Estimated winds</dt><dd>${est ? est + ' mph' : '-'}</dd>` +
+      `<dt>Path length</dt><dd>${(T.path / 1609).toFixed(2)} mi</dd>` +
+      `<dt>Max width</dt><dd>${fmt(T.maxW * 3.281)} ft</dd>` +
+      `<dt>Buildings hit</dt><dd>${T.hits ? T.hits.size : 0}</dd></dl>`;
+  } else d.hidden = true;
+}
+function setRadarOpen(open) {
+  RAD.open = open; $('radarOverlay').hidden = !open;
+  if (open) drawRadarMap();
+}
+$('radarWrap').addEventListener('click', () => { if (G.running && chasing()) setRadarOpen(true); });
+$('btnRadarClose').addEventListener('click', () => setRadarOpen(false));
+document.querySelectorAll('#productSeg button').forEach((b) => b.addEventListener('click', () => { RAD.product = b.dataset.prod; store.set('tiv2-radar-product', RAD.product); drawRadarMap(); drawRadar(); }));
+document.querySelectorAll('#siteSeg button').forEach((b) => b.addEventListener('click', () => { RAD.site = b.dataset.site; RAD.t = 0; drawRadarMap(); }));
+
 function updateHUD(dt, w, time) {
   if (toastTimer > 0) { toastTimer -= dt; if (toastTimer <= 0) el.toast.hidden = true; }
   if (bannerLock > 0) bannerLock -= dt;
@@ -2580,7 +2866,7 @@ function updateHUD(dt, w, time) {
   const p = G.plan;
   if (G.phase === 'calm') { el.status.className = 'panel calm'; el.status.textContent = `Forecast: storms expected in the orange risk area. Supercell in ${Math.ceil(G.phaseT)} s`; }
   else if (G.phase === 'build') { el.status.className = 'panel build'; el.status.textContent = `Supercell moving ${compass(p.dir)} at ${Math.round(p.speed * 2.237)} mph. Touchdown in ${Math.ceil(G.phaseT)} s`; }
-  else if (T.active) { el.status.className = 'panel alert'; el.status.textContent = `TORNADO WARNING  EF${T.ef} ${TORNADO_TYPES[T.type].name.toUpperCase()}  winds up to ${Math.round(EF_MS[T.ef] * 2.237)} mph`; }
+  else if (T.active) { el.status.className = 'panel alert'; el.status.textContent = `${T.ef >= 4 ? 'PDS ' : ''}TORNADO WARNING  EF${T.ef} ${TORNADO_TYPES[T.type].name.toUpperCase()}  winds up to ${Math.round(EF_MS[T.ef] * 2.237)} mph`; }
   else { el.status.className = 'panel calm'; el.status.textContent = G.phase === 'done' ? 'The storm is over. Head back to base.' : 'At base. Plan your next chase.'; }
   let target = null, label = '';
   if (T.active) target = T;
@@ -2621,7 +2907,8 @@ function openBase(note) {
   Object.assign(G.hyd, { state: HYD.RETRACTED, t: 0, susp: 0, skirt: 0, spike: 0 });
   Object.assign(G.car, { speed: 0, steer: 0, driftX: 0, driftZ: 0, lift: 0, spinV: 0 });
   input.throttle = input.steer = 0;
-  ['pauseOverlay', 'summaryOverlay'].forEach((id) => { $(id).hidden = true; });
+  ['pauseOverlay', 'summaryOverlay', 'radarOverlay'].forEach((id) => { $(id).hidden = true; });
+  RAD.open = false; radarRestore(); T.path = 0; RAD.strikes = [];
   saveCareer();
   planStorm();
   renderBase();
@@ -2898,6 +3185,7 @@ function frame(now) {
     updateBales(dt);
     updateProbes(dt, time);
     updateScoring(dt, w);
+    radarTick(dt);
   } else if (showroom) {
     // behind the start card and the base screen: slow turn so the vehicle can be admired
     G.car.h += dt * 0.15;
