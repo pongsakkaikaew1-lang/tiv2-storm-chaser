@@ -6,6 +6,15 @@ Drive the armored TIV2 out to the tornado, park in its path, deploy the hydrauli
 (suspension down, skirts down, spikes in) and film it with the IMAX camera.
 Let the tornado pass right over the truck for the intercept bonus.
 
+## Vehicles
+
+Pick a vehicle on the start screen, or switch any time from the **Car** button (or V) in the garage.
+
+| Vehicle | Top speed | Armor |
+|---|---|---|
+| TIV2 | 58 mph | Heavy: takes the least damage and wind shove |
+| Joker 1 | 69 mph | Lighter: faster, but the core hurts more |
+
 ## Play
 
 Open the GitHub Pages link for this repository. Turn the tablet sideways for the best view.
@@ -19,5 +28,6 @@ Open the GitHub Pages link for this repository. Turn the tablet sideways for the
 | Camera | H | Film the tornado for points |
 | Probe | G | Drop a probe in the tornado's path |
 | View | C | Change camera view |
+| Car | V | Open the garage to change vehicle |
 
 Built with [three.js](https://threejs.org/) as a single `index.html`, no build step.

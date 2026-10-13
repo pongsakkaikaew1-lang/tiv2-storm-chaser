@@ -123,6 +123,10 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
 .seg button { flex: 1 1 120px; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--panel-edge); font-size: 15px; display: grid; gap: 2px; }
 .seg button small { font-family: var(--font-body); font-size: 11px; color: var(--muted); }
 .seg button[aria-pressed="true"] { background: rgba(255, 138, 31, 0.22); border-color: var(--hazard); }
+.seg-label { font-family: var(--font-display); font-size: 14px; color: var(--muted); letter-spacing: 0.04em; margin-bottom: -8px; }
+.veh-seg button { text-align: left; padding: 12px 14px; }
+.veh-seg .veh-name { font-size: 18px; }
+.veh-seg .veh-stats { color: var(--text); opacity: 0.8; }
 .go { padding: 14px 18px; border-radius: 14px; border: 0; background: var(--hazard); color: #1b1006; font-size: 20px; font-weight: 600; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; }
 .row > * { flex: 1 1 140px; }
@@ -163,6 +167,7 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
     <div class="right-col">
       <div id="scoreBox" class="panel"><div id="score">0</div><div id="best">Best 0</div></div>
       <div class="icon-row">
+        <button id="btnGarage" class="icon-btn" aria-label="Change vehicle">Car</button>
         <button id="btnSound" class="icon-btn" aria-label="Sound on or off">Sound</button>
         <button id="btnPause" class="icon-btn" aria-label="Pause game">Pause</button>
       </div>
@@ -202,13 +207,16 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
   <div id="startOverlay" class="overlay">
     <div class="card panel">
       <h1><span>TIV2</span> Storm Chaser</h1>
-      <p>Drive the armored TIV2 to the tornado, lock it to the ground, and film from as close as you dare.</p>
+      <p>Pick your armored chase vehicle, drive it to the tornado, lock it to the ground, and film from as close as you dare.</p>
       <ol class="steps">
         <li><b>1</b><span>Follow the orange arrow and the radar to find the tornado.</span></li>
         <li><b>2</b><span>Park in its path and press <strong>Hydraulics</strong> until the button turns green.</span></li>
         <li><b>3</b><span>Press <strong>Camera</strong> to film. Let the tornado pass right over you for a big bonus!</span></li>
       </ol>
-      <div class="seg" role="group" aria-label="Difficulty">
+      <div class="seg-label">Vehicle</div>
+      <div class="seg veh-seg" role="group" aria-label="Vehicle"></div>
+      <div class="seg-label">Difficulty</div>
+      <div id="levelSeg" class="seg" role="group" aria-label="Difficulty">
         <button data-level="0" aria-pressed="false">Easy<small>EF0–EF2 tornadoes</small></button>
         <button data-level="1" aria-pressed="true">Normal<small>EF0–EF4 tornadoes</small></button>
         <button data-level="2" aria-pressed="false">Extreme<small>EF2–EF5 tornadoes</small></button>
@@ -221,7 +229,7 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
   <div id="pauseOverlay" class="overlay" hidden>
     <div class="card panel">
       <h1>Paused</h1>
-      <p>Drive with the joystick on the left. Park near the tornado, press Hydraulics, then Camera to score. Keyboard: arrows or WASD to drive, R hydraulics, H camera, G probe, C camera view.</p>
+      <p>Drive with the joystick on the left. Park near the tornado, press Hydraulics, then Camera to score. Keyboard: arrows or WASD to drive, R hydraulics, H camera, G probe, C camera view, V change vehicle.</p>
       <div class="row">
         <button id="btnResume" class="go">Resume</button>
         <button id="btnRestart" class="ghost">Restart</button>
@@ -234,7 +242,19 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
       <h1 id="summaryTitle">The tornado roped out</h1>
       <div id="summaryStars">★☆☆</div>
       <dl class="sum-list" id="summaryList"></dl>
-      <button id="btnNext" class="go">Chase the next storm</button>
+      <div class="row">
+        <button id="btnNext" class="go">Chase the next storm</button>
+        <button id="btnSumGarage" class="ghost">Change vehicle</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="garageOverlay" class="overlay" hidden>
+    <div class="card panel">
+      <h1>Garage</h1>
+      <p>Pick the vehicle for your next intercept. You keep your spot on the map.</p>
+      <div class="seg veh-seg" role="group" aria-label="Vehicle"></div>
+      <button id="btnGarageClose" class="go">Drive</button>
     </div>
   </div>
 </div>
@@ -658,8 +678,161 @@ function buildTruck() {
   return { root, body, skirts, spikes, wheels, turret, anemo };
 }
 
-const truck = buildTruck();
-scene.add(truck.root);
+// ---------------------------------------------------------------------------
+// Joker 1: a long black wedge with a sloped nose, a row of round headlights,
+// red LED strips, a light grey tail panel and a tall mast with a white dome camera
+// ---------------------------------------------------------------------------
+function textTexture(text) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+  const g = c.getContext('2d');
+  g.font = '600 40px Fredoka, "Trebuchet MS", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = '#f2f2f2'; g.fillText(text, 128, 28);
+  g.fillStyle = '#e0262a'; g.fillRect(24, 54, 208, 6);
+  return new THREE.CanvasTexture(c);
+}
+const JOKER = {
+  body: lam(0x1c1e21), panel: lam(0x26292d), skirt: lam(0x121315), tail: lam(0xb9bec4),
+  dome: lam(0xd9dee4, { emissive: 0x1c1f22 }), bone: lam(0xddd0b4), led: new THREE.MeshBasicMaterial({ color: 0xff2a2a }),
+  decal: new THREE.MeshBasicMaterial({ map: textTexture('JOKER 1'), transparent: true })
+};
+
+function buildJoker() {
+  const root = new THREE.Group();
+  const body = new THREE.Group(); // everything the airbags lower
+  root.add(body);
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  const box = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); body.add(m); return m; };
+  const hull = (b, t, mat) => body.add(new THREE.Mesh(hullGeometry(b, t), mat));
+  const xAt = (b, t, y) => lerp(b.w, t.w, (y - b.y) / (t.y - b.y));
+  // a plate lying on both raked sides of a hull, centred at zc
+  const sidePlates = (b, t, zc, len, yb, yt, mat) => [-1, 1].forEach((s) => {
+    const xb = s * xAt(b, t, yb), xt = s * xAt(b, t, yt);
+    const pts = s > 0
+      ? [V(xb, yb, zc + len / 2), V(xb, yb, zc - len / 2), V(xt, yt, zc - len / 2), V(xt, yt, zc + len / 2)]
+      : [V(xb, yb, zc - len / 2), V(xb, yb, zc + len / 2), V(xt, yt, zc + len / 2), V(xt, yt, zc - len / 2)];
+    body.add(plateOn(pts, 0.03, mat));
+  });
+
+  // chassis, headlight band, long sloped nose, cabin and rear box
+  box(2.3, 0.5, 7.2, JOKER.skirt, 0, 0.75, 0);
+  box(2.72, 0.4, 7.75, JOKER.panel, 0, 1.05, -0.02);
+  const NB = { w: 1.36, y: 1.25, z0: -3.9, z1: 3.85 }, NT = { w: 1.0, y: 2.05, z0: -3.75, z1: 1.35 };
+  hull(NB, NT, JOKER.body);
+  const CB = { w: 1.0, y: 2.05, z0: -1.3, z1: 1.35 }, CT = { w: 0.74, y: 2.78, z0: -1.0, z1: 0.2 };
+  hull(CB, CT, JOKER.body);
+  const RB = { w: 1.0, y: 2.05, z0: -3.75, z1: -1.3 }, RT = { w: 0.84, y: 2.62, z0: -3.6, z1: -0.95 };
+  hull(RB, RT, JOKER.body);
+
+  // windows: split windshield on the cabin's slope, cabin side panes, a big pane at the back
+  const along = (a, b2, t) => V(lerp(a.x, b2.x, t), lerp(a.y, b2.y, t), lerp(a.z, b2.z, t));
+  const fb = V(0, CB.y, CB.z1), ft = V(0, CT.y, CT.z1);
+  [-1, 1].forEach((s) => {
+    const lo = along(fb, ft, 0.12), hi = along(fb, ft, 0.88);
+    const wLo = lerp(CB.w, CT.w, 0.12) - 0.1, wHi = lerp(CB.w, CT.w, 0.88) - 0.08;
+    const pts = s > 0
+      ? [V(0.04, lo.y, lo.z), V(wLo, lo.y, lo.z), V(wHi, hi.y, hi.z), V(0.04, hi.y, hi.z)]
+      : [V(-wLo, lo.y, lo.z), V(-0.04, lo.y, lo.z), V(-0.04, hi.y, hi.z), V(-wHi, hi.y, hi.z)];
+    body.add(plateOn(pts, 0.03, TRUCK.glass));
+  });
+  sidePlates(CB, CT, -0.2, 0.9, 2.15, 2.62, TRUCK.glass);
+  sidePlates(RB, RT, -3.0, 0.9, 2.13, 2.5, TRUCK.glass);
+  sidePlates(NB, NT, -2.4, 1.2, 1.38, 1.68, JOKER.decal);
+
+  // little roof pod on the cabin
+  box(0.95, 0.3, 0.8, JOKER.panel, 0, CT.y + 0.15, -0.45);
+  box(0.8, 0.14, 0.03, TRUCK.glass, 0, CT.y + 0.17, -0.04);
+
+  // four round headlights each side, red tail lights, light grey tail panel
+  const hl = new THREE.CylinderGeometry(0.085, 0.085, 0.06, 12);
+  [-1, 1].forEach((s) => {
+    for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(hl, TRUCK.lamp); m.rotation.x = Math.PI / 2; m.position.set(s * (0.5 + i * 0.22), 1.05, 3.88); body.add(m); }
+    box(0.3, 0.12, 0.05, TRUCK.tail, s * 1.05, 1.05, -3.92);
+    box(0.12, 0.08, 0.05, TRUCK.amber, s * 1.28, 1.2, 3.88);
+  });
+  body.add(plateOn([V(0.95, 1.3, -3.9), V(-0.95, 1.3, -3.9), V(-0.78, 2.55, -3.62), V(0.78, 2.55, -3.62)], 0.04, JOKER.tail));
+
+  // two rows of red LEDs along each side of the nose
+  const ledGeo = new THREE.BoxGeometry(0.03, 0.06, 0.1);
+  [-1, 1].forEach((s) => [1.48, 1.62].forEach((y) => {
+    for (let z = 0.9; z <= 2.3; z += 0.16) { const m = new THREE.Mesh(ledGeo, JOKER.led); m.position.set(s * (xAt(NB, NT, y) + 0.01), y, z); body.add(m); }
+  }));
+
+  // longhorn horns on the hood
+  const hz = 2.2, hy = NB.y + (NT.y - NB.y) * (NB.z1 - hz) / (NB.z1 - NT.z1);
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), JOKER.bone); skull.position.set(-0.45, hy + 0.05, hz); body.add(skull);
+  [-1, 1].forEach((s) => {
+    const horn = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.05, 0.6, 6), JOKER.bone);
+    horn.rotation.z = -s * (Math.PI / 2 - 0.35); horn.position.set(-0.45 + s * 0.32, hy + 0.15, hz); body.add(horn);
+  });
+
+  // tall mast with the white dome camera; the lens inside follows the tornado
+  const mx = 0.15, mz = -1.6;
+  box(0.3, 0.15, 0.3, JOKER.panel, mx, RT.y + 0.07, mz);
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.4, 8), JOKER.skirt); mast.position.set(mx, RT.y + 1.2, mz); body.add(mast);
+  const turret = new THREE.Group(); turret.position.set(mx, RT.y + 2.4, mz); body.add(turret);
+  const housing = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.2, 0.36, 12), JOKER.skirt); housing.position.y = 0.18; turret.add(housing);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 12), JOKER.dome); dome.position.y = 0.62; turret.add(dome);
+  const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.12, 12), TRUCK.lens); lens.rotation.x = Math.PI / 2; lens.position.set(0, 0.6, 0.33); turret.add(lens);
+
+  // instrument bar behind the mast: beacon, sensor box and the anemometer
+  const by = 3.75, bz0 = -1.95, bz1 = -3.3, bzc = (bz0 + bz1) / 2;
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, by - RT.y, 6), JOKER.skirt); post.position.set(mx, (by + RT.y) / 2, bzc); body.add(post);
+  box(0.05, 0.05, bz0 - bz1, JOKER.skirt, mx, by, bzc);
+  box(0.03, 0.3, 0.03, JOKER.skirt, mx, by + 0.15, bz1);
+  box(0.12, 0.16, 0.12, TRUCK.chrome, mx, by + 0.36, bz1);
+  box(0.03, 0.2, 0.03, JOKER.skirt, mx, by - 0.1, bz1);
+  const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.13, 10), TRUCK.amber); beacon.position.set(mx, by + 0.09, bzc + 0.25); body.add(beacon);
+  box(0.03, 0.3, 0.03, JOKER.skirt, mx, by + 0.15, bz0);
+  const anemo = new THREE.Group(); anemo.position.set(mx, by + 0.32, bz0); body.add(anemo);
+  for (let i = 0; i < 3; i++) {
+    const holder = new THREE.Group(); holder.rotation.y = i * TAU / 3;
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 0.02), TRUCK.chrome); arm.position.x = 0.12; holder.add(arm);
+    const cup = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), TRUCK.chrome); cup.position.x = 0.24; holder.add(cup);
+    anemo.add(holder);
+  }
+  const whip = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.1, 4), JOKER.skirt); whip.position.set(-0.5, RT.y + 0.55, -3.2); body.add(whip);
+
+  // near-vertical skirts all round with a row of bolts; they drop to the ground when locked
+  const skirts = [];
+  const boltGeo = new THREE.BoxGeometry(0.05, 0.05, 0.03);
+  const addSkirt = (w, x, z, yaw) => {
+    const h = 0.68;
+    const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = yaw;
+    const lean = new THREE.Group(); lean.rotation.x = -0.08; g.add(lean);
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.07), JOKER.skirt); plate.position.y = h / 2; lean.add(plate);
+    const n = Math.floor(w / 0.24);
+    const bolts = new THREE.InstancedMesh(boltGeo, TRUCK.chrome, n);
+    const o = new THREE.Object3D();
+    for (let i = 0; i < n; i++) { o.position.set(-w / 2 + 0.12 + i * 0.24, 0.1, 0.045); o.updateMatrix(); bolts.setMatrixAt(i, o.matrix); }
+    lean.add(bolts);
+    body.add(g); skirts.push({ g, up: 0.2, down: -0.06 });
+  };
+  addSkirt(2.86, 0, 3.92, 0);
+  addSkirt(2.86, 0, -3.97, Math.PI);
+  addSkirt(7.88, 1.41, -0.02, Math.PI / 2);
+  addSkirt(7.88, -1.41, -0.02, -Math.PI / 2);
+
+  // four wheels tucked behind the skirts
+  const wheels = [];
+  [[1.08, 2.55, true], [-1.08, 2.55, true], [1.08, -2.55, false], [-1.08, -2.55, false]].forEach(([x, z, frontW]) => {
+    const r = 0.52;
+    const steer = new THREE.Group(); steer.position.set(x, r, z); root.add(steer);
+    const spin = new THREE.Group(); steer.add(spin);
+    const tire = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.46, 16), TRUCK.tire); tire.rotation.z = Math.PI / 2; spin.add(tire);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.5, r * 0.5, 0.48, 10), TRUCK.hub); hub.rotation.z = Math.PI / 2; spin.add(hub);
+    wheels.push({ steer, spin, r, front: frontW });
+  });
+
+  return { root, body, skirts, spikes: [], wheels, turret, anemo };
+}
+
+// Vehicles in the garage. maxF is top speed in m/s; dmg and push scale armor damage and wind shove.
+const VEHICLES = [
+  { id: 'tiv2', name: 'TIV2', stats: 'Top speed 58 mph · Heavy armor', build: buildTruck, maxF: 26, dmg: 1, push: 1 },
+  { id: 'joker1', name: 'Joker 1', stats: 'Top speed 69 mph · Lighter armor', build: buildJoker, maxF: 31, dmg: 1.25, push: 1.2 }
+];
+const fleet = {};
+let truck = null;
 
 // ---------------------------------------------------------------------------
 // Game state
@@ -670,7 +843,7 @@ const HYD = { RETRACTED: 0, DEPLOYING: 1, LOCKED: 2, RETRACTING: 3 };
 const DEPLOY_T = 3.0, RETRACT_T = 2.4;
 
 const G = {
-  running: false, paused: false, level: store.get('tiv2-level', 1),
+  running: false, paused: false, level: store.get('tiv2-level', 1), vehicle: 0,
   score: 0, best: store.get('tiv2-best', 0), stormScore: 0,
   phase: 'calm', phaseT: 14, storm: 0, flash: 0, nextBolt: 4,
   car: { x: 0, z: -40, h: 0, speed: 0, steer: 0, driftX: 0, driftZ: 0, lift: 0, spinV: 0, armor: 100 },
@@ -680,6 +853,18 @@ const G = {
   stats: { closest: Infinity, intercept: false, probeHits: 0, rec: 0 }
 };
 const T = { active: false, x: 0, z: 0, ef: 0, R: 20, H: 300, inten: 0, age: 0, life: 90, yaw: 0, yawVel: 0, speed: 9, hitPlayer: false };
+
+// swap the model in the scene; the hydraulics start retracted on the new vehicle
+function setVehicle(i) {
+  const v = VEHICLES[i] || VEHICLES[0];
+  if (truck) scene.remove(truck.root);
+  truck = fleet[v.id] || (fleet[v.id] = v.build());
+  scene.add(truck.root);
+  G.vehicle = VEHICLES.indexOf(v);
+  store.set('tiv2-vehicle', v.id);
+  Object.assign(G.hyd, { state: HYD.RETRACTED, t: 0, susp: 0, skirt: 0, spike: 0 });
+}
+setVehicle(Math.max(0, VEHICLES.findIndex((v) => v.id === store.get('tiv2-vehicle', 'tiv2'))));
 
 // ---------------------------------------------------------------------------
 // Tornado visuals
@@ -886,6 +1071,8 @@ $('btnSound').textContent = AudioFX.on ? 'Sound' : 'Muted';
 window.addEventListener('keydown', (e) => {
   input.keys[e.code] = true;
   if (!G.running) return;
+  if (!$('garageOverlay').hidden) { if (e.code === 'Escape' || e.code === 'KeyV') closeGarage(); return; }
+  if (e.code === 'KeyV' && !G.paused) { openGarage(); return; }
   if (e.code === 'KeyR') toggleHydraulics();
   else if (e.code === 'KeyH') toggleCamera();
   else if (e.code === 'KeyG') dropProbe();
@@ -1018,7 +1205,8 @@ function updateCar(dt) {
   if (anchored) { thr = 0; if (Math.abs(input.throttle) > 0.5 || k.t) { if (!G._anchHint) { toast('Retract the hydraulics before you drive'); G._anchHint = 3; } } }
   if (G._anchHint) G._anchHint = Math.max(0, G._anchHint - dt);
 
-  const MAXF = 26, MAXR = 8;
+  const VH = VEHICLES[G.vehicle];
+  const MAXF = VH.maxF, MAXR = 8;
   if (thr > 0.05) c.speed += (c.speed < 0 ? 22 : 9) * thr * dt;
   else if (thr < -0.05) c.speed += (c.speed > 0 ? 22 : 6) * thr * dt;
   else c.speed -= Math.sign(c.speed) * Math.min(Math.abs(c.speed), 5 * dt);
@@ -1033,7 +1221,7 @@ function updateCar(dt) {
   const locked = h.state === HYD.LOCKED;
   const push = clamp((w.ms - 28) / 40, 0, 1.6);
   if (!locked && push > 0) {
-    c.driftX += w.x * push * 18 * dt; c.driftZ += w.z * push * 18 * dt;
+    c.driftX += w.x * push * 18 * VH.push * dt; c.driftZ += w.z * push * 18 * VH.push * dt;
     if (w.xr < 1.1) { c.spinV += (1.6 + T.ef * 0.4) * dt; c.lift = lerp(c.lift, 1.6 + T.ef * 0.5, dt * 1.5); }
     if (!G._pushHint) { banner('The wind is pushing you! Stop and lock the hydraulics.', 'warn', 2); G._pushHint = 6; }
   }
@@ -1051,12 +1239,12 @@ function updateCar(dt) {
   if (Math.abs(c.x) > lim || Math.abs(c.z) > lim) { c.x = clamp(c.x, -lim, lim); c.z = clamp(c.z, -lim, lim); c.speed *= -0.3; }
   for (const o of obstacles) {
     const dx = c.x - o.x, dz = c.z - o.z, d = Math.hypot(dx, dz), min = o.r + 2.4;
-    if (d < min && d > 0.01) { c.x = o.x + dx / d * min; c.z = o.z + dz / d * min; if (Math.abs(c.speed) > 6) { c.armor -= Math.abs(c.speed) * 0.4; AudioFX.clunk(); G.camShake = 0.35; } c.speed *= -0.25; }
+    if (d < min && d > 0.01) { c.x = o.x + dx / d * min; c.z = o.z + dz / d * min; if (Math.abs(c.speed) > 6) { c.armor -= Math.abs(c.speed) * 0.4 * VH.dmg; AudioFX.clunk(); G.camShake = 0.35; } c.speed *= -0.25; }
   }
 
   // damage near the core
   if (w.xr < 1.6) {
-    const dmg = (4 + T.ef * 3.5) * T.inten * (w.xr < 1 ? 1 : 0.4) * (locked ? 0.3 : 1);
+    const dmg = (4 + T.ef * 3.5) * T.inten * (w.xr < 1 ? 1 : 0.4) * (locked ? 0.3 : 1) * VH.dmg;
     c.armor -= dmg * dt;
     if (Math.random() < dt * 2) AudioFX.burst('bandpass', 1400, 0.2, 0.25);
   }
@@ -1356,7 +1544,9 @@ function setPaused(p) {
 document.addEventListener('visibilitychange', () => { if (document.hidden && G.running && !G.paused) setPaused(true); });
 press($('btnResume'), () => setPaused(false));
 press($('btnRestart'), () => { $('pauseOverlay').hidden = true; resetGame(); G.paused = false; });
-press($('btnNext'), () => { $('summaryOverlay').hidden = true; G.paused = false; G.probeList.forEach((p) => scene.remove(p.m)); G.probeList = []; });
+function closeSummary() { $('summaryOverlay').hidden = true; G.paused = false; G.probeList.forEach((p) => scene.remove(p.m)); G.probeList = []; }
+press($('btnNext'), () => closeSummary());
+press($('btnSumGarage'), () => { closeSummary(); openGarage(); });
 
 function resetGame() {
   Object.assign(G.car, { x: 0, z: -40, h: 0, speed: 0, steer: 0, driftX: 0, driftZ: 0, lift: 0, spinV: 0, armor: 100 });
@@ -1367,13 +1557,39 @@ function resetGame() {
   camPos.set(0, 8, -60); lookSm.set(0, 2, 0);
 }
 
-document.querySelectorAll('.seg button').forEach((b) => {
+document.querySelectorAll('#levelSeg button').forEach((b) => {
   b.setAttribute('aria-pressed', String(Number(b.dataset.level) === G.level));
   b.addEventListener('click', () => {
     G.level = Number(b.dataset.level); store.set('tiv2-level', G.level);
-    document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    document.querySelectorAll('#levelSeg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
   });
 });
+
+// vehicle pickers on the start card and in the garage
+const vehButtons = [];
+document.querySelectorAll('.veh-seg').forEach((seg) => {
+  VEHICLES.forEach((v, i) => {
+    const b = document.createElement('button');
+    b.innerHTML = `<span class="veh-name">${v.name}</span><small class="veh-stats">${v.stats}</small>`;
+    b.addEventListener('click', () => {
+      if (G.vehicle !== i) { setVehicle(i); if (G.running) toast(`${v.name} ready to chase`, 1600); }
+      syncVehButtons();
+    });
+    seg.appendChild(b); vehButtons.push([b, i]);
+  });
+});
+function syncVehButtons() { vehButtons.forEach(([b, i]) => b.setAttribute('aria-pressed', String(i === G.vehicle))); }
+syncVehButtons();
+function openGarage() {
+  if (!G.running) return;
+  G.paused = true; input.throttle = input.steer = 0;
+  $('pauseOverlay').hidden = true;
+  syncVehButtons();
+  $('garageOverlay').hidden = false;
+}
+function closeGarage() { $('garageOverlay').hidden = true; G.paused = false; }
+press($('btnGarage'), () => { if ($('summaryOverlay').hidden) openGarage(); });
+press($('btnGarageClose'), () => closeGarage());
 $('btnStart').addEventListener('click', () => {
   AudioFX.init(); if (AudioFX.ctx && AudioFX.ctx.state === 'suspended') AudioFX.ctx.resume();
   $('startOverlay').hidden = true;
