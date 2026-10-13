@@ -734,6 +734,20 @@ const JOKER = {
   }) })
 };
 
+// a hydraulic ram from top to bottom (body coordinates) whose chrome rod slides out along
+// its own axis and into the ground: fully deployed the tip is 0.35 m under the ground
+// (the body is lowered 0.22 m by then)
+const RAM_UP = new THREE.Vector3(0, 1, 0);
+function hydraulicRam(body, spikes, top, bottom, ramMat, bandMat) {
+  const dir = new THREE.Vector3().subVectors(bottom, top); const len = dir.length(); dir.normalize();
+  const q = new THREE.Quaternion().setFromUnitVectors(RAM_UP, dir);
+  const ram = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, len, 10), ramMat); ram.quaternion.copy(q); ram.position.copy(top).add(bottom).multiplyScalar(0.5); body.add(ram);
+  [0.1, 0.9].forEach((k) => { const band = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.08, 10), bandMat); band.quaternion.copy(q); band.position.lerpVectors(top, bottom, k); body.add(band); });
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1, 8), TRUCK.chrome); rod.quaternion.copy(q); body.add(rod);
+  const maxL = Math.max(0.2, (bottom.y - (-0.35 + 0.22)) / -dir.y);
+  spikes.push({ rod, p0: bottom.clone(), dir, minL: 0.05, maxL });
+}
+
 function buildJoker() {
   const root = new THREE.Group();
   const body = new THREE.Group(); // everything the airbags lower
@@ -894,6 +908,10 @@ function buildJoker() {
   addSkirt(7.78, 1.36, 0.04, Math.PI / 2);
   addSkirt(7.78, -1.36, 0.04, -Math.PI / 2);
 
+  // black hydraulic rams with yellow bands near each corner, outside the skirts
+  const spikes = [];
+  [-1, 1].forEach((s) => [2.05, -2.2].forEach((z) => hydraulicRam(body, spikes, V(s * 1.33, 1.45, z), V(s * 1.52, 0.48, z), JOKER.panel, TRUCK.yellow)));
+
   // four wheels tucked behind the skirts
   const wheels = [];
   [[1.05, 2.6, true], [-1.05, 2.6, true], [1.05, -2.55, false], [-1.05, -2.55, false]].forEach(([x, z, frontW]) => {
@@ -905,7 +923,7 @@ function buildJoker() {
     wheels.push({ steer, spin, r, front: frontW });
   });
 
-  return { root, body, skirts, spikes: [], wheels, turret, anemo };
+  return { root, body, skirts, spikes, wheels, turret, anemo };
 }
 
 // ---------------------------------------------------------------------------
@@ -1058,17 +1076,7 @@ function buildJoker2() {
 
   // purple hydraulic rams lying along the rear half of each side skirt
   const spikes = [];
-  const UPV = V(0, 1, 0);
-  const addRam = (top2, bottom) => {
-    const dir = new THREE.Vector3().subVectors(bottom, top2); const len = dir.length(); dir.normalize();
-    const q = new THREE.Quaternion().setFromUnitVectors(UPV, dir);
-    const ram = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, len, 10), JOKER2.purple); ram.quaternion.copy(q); ram.position.copy(top2).add(bottom).multiplyScalar(0.5); body.add(ram);
-    [0.1, 0.9].forEach((k) => { const band = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.08, 10), JOKER2.dark); band.quaternion.copy(q); band.position.lerpVectors(top2, bottom, k); body.add(band); });
-    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1, 8), TRUCK.chrome); rod.quaternion.copy(q); body.add(rod);
-    const maxL = Math.max(0.2, (bottom.y - (-0.35 + 0.22)) / -dir.y);
-    spikes.push({ rod, p0: bottom.clone(), dir, minL: 0.05, maxL });
-  };
-  [-1, 1].forEach((s) => [-1.5, -2.5].forEach((z) => addRam(V(s * 1.13, 1.62, z), V(s * 1.62, 0.42, z))));
+  [-1, 1].forEach((s) => [-1.5, -2.5].forEach((z) => hydraulicRam(body, spikes, V(s * 1.13, 1.62, z), V(s * 1.62, 0.42, z), JOKER2.purple, JOKER2.dark)));
 
   // eight wheels on four axles behind the skirts
   const wheels = [];
