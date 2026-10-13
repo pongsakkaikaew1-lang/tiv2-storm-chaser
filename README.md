@@ -16,6 +16,12 @@ A 3D storm chasing game that runs in any modern browser, made for tablets.
 Fuel burns while you drive, damage stays until you repair it, and if your armor runs out the crew
 tows you out for a $250 fee. Progress is saved in the browser.
 
+## Admin
+
+In the base, **Shop → Admin** opens a PIN-locked panel (you create the PIN the first time). It can add
+any amount of money, set the money to an exact amount, or switch on **Unlimited money** so everything
+in the shop and garage is free. The PIN is stored on the device, so it only keeps casual players out.
+
 ## Vehicles
 
 | Vehicle | Top speed | Notes |

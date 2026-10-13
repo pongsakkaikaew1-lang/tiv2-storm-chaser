@@ -170,6 +170,14 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
 #baseMsg { color: var(--good); min-height: 1.4em; }
 #baseWarn { color: var(--warn); }
 #baseWarn:empty { display: none; }
+.admin-amounts { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.admin-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.admin-row input { flex: 1 1 140px; min-width: 0; padding: 11px 12px; border-radius: 12px; border: 1px solid var(--panel-edge); background: rgba(255, 255, 255, 0.06); color: var(--text); font: 600 17px var(--font-body); }
+.admin-row input:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+.switch { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 16px; }
+.switch input { width: 24px; height: 24px; accent-color: var(--hazard); }
+#adminMsg { color: var(--good); min-height: 1.4em; }
+#adminMsg.err { color: var(--rec); }
 #btnDeploy { position: sticky; bottom: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45); }
 
 @media (max-width: 760px) {
@@ -314,11 +322,48 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
       <section id="tab-shop" hidden>
         <div id="shopList"></div>
         <p id="payInfo"></p>
-        <button id="btnReset" class="ghost">Start a new career</button>
+        <div class="row">
+          <button id="btnReset" class="ghost">Start a new career</button>
+          <button id="btnAdmin" class="ghost">Admin</button>
+        </div>
       </section>
       <p id="baseMsg" role="status"></p>
       <p id="baseWarn"></p>
       <button id="btnDeploy" class="go">Deploy</button>
+    </div>
+  </div>
+
+  <div id="adminOverlay" class="overlay" hidden>
+    <div class="card panel">
+      <div class="base-head"><h1>Admin</h1><div id="adminMoney" class="money">$0</div></div>
+      <div id="adminLock">
+        <p id="adminLockText">Enter the admin PIN.</p>
+        <div class="admin-row">
+          <input id="adminPin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" aria-label="Admin PIN">
+          <button id="btnAdminUnlock" class="buy">Unlock</button>
+        </div>
+      </div>
+      <div id="adminPanel" hidden>
+        <h2 class="sub">Add money</h2>
+        <div class="admin-amounts">
+          <button class="buy" data-add="1000">+$1,000</button>
+          <button class="buy" data-add="10000">+$10,000</button>
+          <button class="buy" data-add="100000">+$100,000</button>
+          <button class="buy" data-add="1000000">+$1,000,000</button>
+        </div>
+        <div class="admin-row">
+          <input id="adminAmount" type="number" inputmode="numeric" min="0" step="1" placeholder="Any amount" aria-label="Amount of money">
+          <button id="btnAdminAdd" class="buy">Add</button>
+          <button id="btnAdminSet" class="buy">Set money to this</button>
+        </div>
+        <label class="switch"><input id="adminUnlimited" type="checkbox"> Unlimited money: everything in the shop and garage is free</label>
+        <div class="admin-row">
+          <input id="adminNewPin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="New PIN" aria-label="New admin PIN">
+          <button id="btnAdminPin" class="buy">Change PIN</button>
+        </div>
+      </div>
+      <p id="adminMsg" role="status"></p>
+      <button id="btnAdminClose" class="go">Back to base</button>
     </div>
   </div>
 </div>
@@ -2031,7 +2076,7 @@ function updateCar(dt) {
 
 function repairTruck() {
   const c = G.car;
-  const fee = Math.min(career.money, PRICE.tow);
+  const fee = career.unlimited ? 0 : Math.min(career.money, PRICE.tow);
   career.money -= fee;
   banner(`Heavy damage! The crew towed you out and patched the truck. Tow fee $${fmt(fee)}`, 'warn', 2.8);
   G.scan = false;
@@ -2350,7 +2395,7 @@ function updateHUD(dt, w, time) {
 
   if (hudT > 0) return;
   hudT = 0.12;
-  el.score.textContent = '$' + fmt(career.money);
+  el.score.textContent = moneyText();
   el.best.textContent = chasing() ? 'Data +' + fmt(G.stormScore) : `${fmt(career.storms)} storm${career.storms === 1 ? '' : 's'} chased`;
   el.armorBar.style.width = clamp(c.armor, 0, 100) + '%';
   el.armorBar.style.background = c.armor > 50 ? 'var(--good)' : c.armor > 25 ? 'var(--warn)' : 'var(--rec)';
@@ -2396,7 +2441,9 @@ function updateHUD(dt, w, time) {
 // ---------------------------------------------------------------------------
 let baseTab = 'forecast';
 function baseMsg(text) { $('baseMsg').textContent = text || ''; }
+const moneyText = () => (career.unlimited ? '$∞' : '$' + fmt(career.money));
 function spend(cost) {
+  if (career.unlimited) { AudioFX.tone(1320, 0.1, 0.18, 'sine'); return true; }
   if (career.money < cost) { baseMsg(`Not enough money: that costs $${fmt(cost)}.`); AudioFX.beep(); return false; }
   career.money -= cost; AudioFX.tone(1320, 0.1, 0.18, 'sine'); return true;
 }
@@ -2519,15 +2566,15 @@ function renderShop() {
   const list = $('shopList'); list.innerHTML = '';
   const fuelNeed = 100 - G.fuel, fuelCost = Math.ceil(fuelNeed * PRICE.fuel);
   list.appendChild(shopRow(`Fuel ${Math.ceil(G.fuel)}%`, `$${PRICE.fuel} per 1%. Fills what you can afford.`, fuelNeed < 0.5 ? 'Full' : `Fill up $${fmt(fuelCost)}`, fuelNeed < 0.5, () => {
-    const add = Math.min(fuelNeed, career.money / PRICE.fuel);
+    const add = career.unlimited ? fuelNeed : Math.min(fuelNeed, career.money / PRICE.fuel);
     if (add < 0.5) { spend(fuelCost); return; }
-    career.money -= Math.ceil(add * PRICE.fuel); G.fuel = Math.min(100, G.fuel + add); saveCareer(); baseMsg('Tank filled.'); renderBase();
+    if (!career.unlimited) career.money -= Math.ceil(add * PRICE.fuel); G.fuel = Math.min(100, G.fuel + add); saveCareer(); baseMsg('Tank filled.'); renderBase();
   }));
   const armNeed = 100 - G.car.armor, armCost = Math.ceil(armNeed * PRICE.repair);
   list.appendChild(shopRow(`Repair ${Math.round(G.car.armor)}%`, `$${PRICE.repair} per 1% of armor. Fixes what you can afford.`, armNeed < 0.5 ? 'Like new' : `Repair $${fmt(armCost)}`, armNeed < 0.5, () => {
-    const add = Math.min(armNeed, career.money / PRICE.repair);
+    const add = career.unlimited ? armNeed : Math.min(armNeed, career.money / PRICE.repair);
     if (add < 0.5) { spend(armCost); return; }
-    career.money -= Math.ceil(add * PRICE.repair); G.car.armor = Math.min(100, G.car.armor + add); saveCareer(); baseMsg('Repaired.'); renderBase();
+    if (!career.unlimited) career.money -= Math.ceil(add * PRICE.repair); G.car.armor = Math.min(100, G.car.armor + add); saveCareer(); baseMsg('Repaired.'); renderBase();
   }));
   const cap = probeCap();
   list.appendChild(shopRow(`Probe ${career.probes}/${cap}`, 'Drop it in the tornado\'s path for a big data bonus. Missed probes come back.', career.probes >= cap ? 'Rack full' : `Buy one $${PRICE.probe}`, career.probes >= cap, () => {
@@ -2542,7 +2589,7 @@ function renderShop() {
   $('payInfo').textContent = `Data is paid at $${PAY_RATE.toFixed(2)} per point. Lifetime data: ${fmt(career.dataTotal)}.`;
 }
 function renderBase() {
-  $('baseMoney').textContent = '$' + fmt(career.money);
+  $('baseMoney').textContent = moneyText();
   renderForecast(); renderGarage(); renderShop();
   const sp = SPAWNS[career.spawn] || SPAWNS[0];
   $('btnDeploy').textContent = `Deploy to ${sp.name}`;
@@ -2553,6 +2600,56 @@ function renderBase() {
   setBaseTab(baseTab);
 }
 press($('btnDeploy'), () => deploy());
+
+// Admin: a PIN-locked panel to add money or switch on unlimited money. The PIN is set the first
+// time the panel opens and only keeps casual players out (it is stored in this device's browser).
+const MONEY_MAX = 999999999999;
+let adminOpen = false;
+function adminMsg(text, err) { const m = $('adminMsg'); m.textContent = text || ''; m.className = err ? 'err' : ''; }
+function renderAdmin() {
+  $('adminMoney').textContent = $('baseMoney').textContent = moneyText();
+  $('adminUnlimited').checked = !!career.unlimited;
+  const hasPin = !!store.get('tiv2-admin-pin', '');
+  $('adminLock').hidden = adminOpen; $('adminPanel').hidden = !adminOpen;
+  $('adminLockText').textContent = hasPin ? 'Enter the admin PIN.' : 'Create an admin PIN (4 to 8 digits). You will need it to open this panel again.';
+  $('btnAdminUnlock').textContent = hasPin ? 'Unlock' : 'Set PIN';
+}
+function openAdmin() { adminOpen = false; $('adminPin').value = ''; adminMsg(''); renderAdmin(); $('adminOverlay').hidden = false; }
+function closeAdmin() { $('adminOverlay').hidden = true; adminOpen = false; renderBase(); }
+const validPin = (v) => /^[0-9]{4,8}$/.test(v);
+function addMoney(n) {
+  if (!(n > 0)) { adminMsg('Type an amount above zero.', true); return; }
+  career.money = Math.min(MONEY_MAX, Math.round(career.money + n)); saveCareer();
+  adminMsg(`Added $${fmt(n)}.`); renderAdmin();
+}
+$('btnAdmin').addEventListener('click', openAdmin);
+$('btnAdminClose').addEventListener('click', closeAdmin);
+$('btnAdminUnlock').addEventListener('click', () => {
+  const v = $('adminPin').value.trim(), pin = store.get('tiv2-admin-pin', '');
+  if (!pin) {
+    if (!validPin(v)) { adminMsg('The PIN must be 4 to 8 digits.', true); return; }
+    store.set('tiv2-admin-pin', v); adminOpen = true; adminMsg('PIN saved. Admin unlocked.');
+  } else if (v === pin) { adminOpen = true; adminMsg('Admin unlocked.'); }
+  else { adminMsg('Wrong PIN.', true); AudioFX.beep(); return; }
+  renderAdmin();
+});
+$('adminPin').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnAdminUnlock').click(); });
+document.querySelectorAll('[data-add]').forEach((b) => b.addEventListener('click', () => addMoney(Number(b.dataset.add))));
+$('btnAdminAdd').addEventListener('click', () => addMoney(Math.floor(Number($('adminAmount').value))));
+$('btnAdminSet').addEventListener('click', () => {
+  const n = Math.floor(Number($('adminAmount').value));
+  if (!(n >= 0) || $('adminAmount').value === '') { adminMsg('Type the amount first.', true); return; }
+  career.money = Math.min(MONEY_MAX, n); saveCareer(); adminMsg(`Money set to $${fmt(career.money)}.`); renderAdmin();
+});
+$('adminUnlimited').addEventListener('change', (e) => {
+  career.unlimited = e.target.checked; saveCareer();
+  adminMsg(career.unlimited ? 'Unlimited money is on.' : 'Unlimited money is off.'); renderAdmin();
+});
+$('btnAdminPin').addEventListener('click', () => {
+  const v = $('adminNewPin').value.trim();
+  if (!validPin(v)) { adminMsg('The new PIN must be 4 to 8 digits.', true); return; }
+  store.set('tiv2-admin-pin', v); $('adminNewPin').value = ''; adminMsg('PIN changed.');
+});
 press($('btnReset'), () => {
   if (!window.confirm('Start over? Money, upgrades and paint will be reset.')) return;
   career = JSON.parse(JSON.stringify(CAREER_START));
