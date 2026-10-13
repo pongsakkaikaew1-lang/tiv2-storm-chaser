@@ -66,8 +66,21 @@ garage each vehicle can be painted and upgraded (engine, armor plating, fuel tan
 - **Browser:** open the GitHub Pages link for this repository. After the first visit it also works
   offline, and it can be added to the home screen.
 
-Turn the device sideways for the best view. On older devices pick **Graphics: Low** on the start screen
-(no shadows, lighter rendering).
+Turn the device sideways for the best view.
+
+## Look and graphics quality
+
+Chases happen at sunset: a deep purple sky with an orange glow in the west, long shadows, dusky fog
+and rain. The supercell is a stack of blocky cloud tiers turning over the storm, with lightning
+flickering inside and bolts that light up the scene; tornadoes are smoky with debris tumbling around
+them. The road is wet and glossy, grass sways in the wind, power lines run along the roads, and the
+vehicles have headlight beams, blinking amber warning lights and a roof beacon. The HUD has a weather
+radar window and a SPEED / WIND / DISTANCE readout.
+
+Pick **Graphics** on the start screen or in the pause menu: **High** (shadows, dense grass, every
+effect), **Medium** (no shadows, less grass and debris) or **Low** (older devices: no grass, headlight
+beams or lightning light). If the game runs below about 24 fps during a chase it steps down a level
+on its own.
 
 ## Android build
 

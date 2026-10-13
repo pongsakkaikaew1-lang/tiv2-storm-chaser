@@ -26,8 +26,8 @@
    Deliberately single dark theme: it is a game screen drawn over a stormy sky. */
 :root {
   --ink: #0d1116;
-  --panel: rgba(13, 18, 25, 0.74);
-  --panel-edge: rgba(160, 190, 215, 0.22);
+  --panel: rgba(24, 14, 32, 0.74);
+  --panel-edge: rgba(255, 176, 120, 0.24);
   --text: #f1f5f9;
   --muted: #9db0c2;
   --hazard: #ff8a1f;
@@ -38,6 +38,7 @@
   --warn: #ffcf4a;
   --font-display: "Fredoka", "Trebuchet MS", "Segoe UI", sans-serif;
   --font-body: "Nunito", "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", "Courier New", monospace;
   color-scheme: dark;
 }
 html, body { height: 100%; overflow: hidden; }
@@ -67,7 +68,11 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
 #radarInfo { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 0; }
 .seg button:disabled { opacity: 0.45; cursor: default; }
 #radar { width: 132px; height: 132px; display: block; }
-#radarLabel { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
+#radarLabel { font: 700 12px var(--font-mono); color: #f1f5f9; letter-spacing: 0.06em; }
+.radar-title { justify-self: stretch; text-align: center; font: 700 12px var(--font-mono); letter-spacing: 0.08em; color: var(--hazard); padding: 0 2px; }
+.left-col { display: grid; gap: 8px; justify-items: start; }
+#telemetry { font: 700 15px/1.45 var(--font-mono); letter-spacing: 0.04em; color: #ffffff; text-shadow: 0 2px 3px rgba(0,0,0,0.9); padding: 6px 10px; border-radius: 10px; background: rgba(10, 6, 14, 0.55); font-variant-numeric: tabular-nums; pointer-events: none; }
+#telemetry b { color: #ffd38a; }
 .center-col { flex: 1; display: grid; justify-items: center; gap: 8px; min-width: 0; }
 #status { font-family: var(--font-display); font-size: clamp(14px, 2.2vw, 19px); padding: 8px 18px; text-align: center; text-wrap: balance; }
 #status.calm { color: var(--sky); }
@@ -190,7 +195,8 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
 
 @media (max-width: 760px) {
   #radar { width: 104px; height: 104px; }
-  #gauges { width: min(250px, 56vw); left: 16px; transform: none; bottom: auto; top: calc(178px + env(safe-area-inset-top, 0px)); font-size: 12px; padding: 8px 10px; }
+  #gauges { width: min(250px, 56vw); left: 16px; transform: none; bottom: auto; top: calc(262px + env(safe-area-inset-top, 0px)); font-size: 12px; padding: 8px 10px; }
+  #telemetry { font-size: 12px; padding: 4px 8px; }
   .act { width: 70px; height: 70px; font-size: 13px; }
   #btnHyd { width: 98px; height: 98px; }
   #hydProgress { top: 62%; }
@@ -205,9 +211,13 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
   <canvas id="game" aria-label="Storm chasing game view"></canvas>
 
   <div class="top">
-    <div id="radarWrap" class="panel">
-      <canvas id="radar" width="264" height="264" aria-label="Radar"></canvas>
-      <div id="radarLabel">RADAR 900 m</div>
+    <div class="left-col">
+      <div id="radarWrap" class="panel" role="button" aria-label="Weather radar, tap for the full map">
+        <div class="radar-title">WEATHER RADAR</div>
+        <canvas id="radar" width="264" height="264" aria-label="Radar"></canvas>
+        <div id="radarLabel">RADAR 900 m</div>
+      </div>
+      <div id="telemetry" aria-live="off"><div>SPEED: <b id="tmSpeed">0</b> MPH</div><div>WIND: <b id="tmWind">0</b> MPH</div><div>DISTANCE: <b id="tmDist">--</b></div></div>
     </div>
     <div class="center-col">
       <div id="status" class="panel calm">Clear skies. Waiting for a storm...</div>
@@ -273,9 +283,10 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
         <button data-level="2" aria-pressed="false">Extreme<small>EF2–EF5 tornadoes</small></button>
       </div>
       <div class="seg-label">Graphics</div>
-      <div id="gfxSeg" class="seg" role="group" aria-label="Graphics quality">
-        <button data-gfx="high" aria-pressed="true">High<small>Shadows and full detail</small></button>
-        <button data-gfx="low" aria-pressed="false">Low<small>Faster on older devices</small></button>
+      <div id="gfxSeg" class="seg gfx-seg" role="group" aria-label="Graphics quality">
+        <button data-gfx="high" aria-pressed="true">High<small>Shadows, dense grass</small></button>
+        <button data-gfx="medium" aria-pressed="false">Medium<small>No shadows</small></button>
+        <button data-gfx="low" aria-pressed="false">Low<small>Older devices</small></button>
       </div>
       <button id="btnStart" class="go">Start chasing</button>
       <p id="rotateHint">Turn the tablet sideways for the best view.</p>
@@ -286,6 +297,10 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
     <div class="card panel">
       <h1>Paused</h1>
       <p>Drive with the joystick on the left. Park in the tornado's path, press Hydraulics, then Camera (or Scan in the Radar Truck) to collect data. Return to base to get paid for what you have so far. Keyboard: arrows or WASD to drive, R hydraulics, H camera, G probe, C camera view, F radar scan, M radar map, P pause.</p>
+      <div class="seg-label">Graphics</div>
+      <div class="seg gfx-seg" role="group" aria-label="Graphics quality">
+        <button data-gfx="high">High</button><button data-gfx="medium">Medium</button><button data-gfx="low">Low</button>
+      </div>
       <div class="row">
         <button id="btnResume" class="go">Resume</button>
         <button id="btnReturn" class="ghost">Return to base</button>
@@ -429,26 +444,40 @@ const srnd = (a, b) => a + (b - a) * srand();
 const canvas = $('game');
 const dpr = window.devicePixelRatio || 1;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: dpr < 2, powerPreference: 'high-performance' });
-// High: sun shadows and a sharper picture; Low: for older phones and tablets
-const GFX = { high: store.get('tiv2-gfx', 'high') !== 'low' };
-renderer.setPixelRatio(GFX.high ? Math.min(dpr, 1.5) : 1);
+// Quality: High (shadows, dense grass, every effect), Medium (no shadows, less grass and debris),
+// Low (older phones: no grass, headlight beams or lightning light)
+const GFX_NAMES = ['low', 'medium', 'high'];
+const GFX = { level: Math.max(0, GFX_NAMES.indexOf(store.get('tiv2-gfx', 'high'))) };
+GFX.high = GFX.level === 2;
+const pixelRatioFor = (lv) => (lv === 2 ? Math.min(dpr, 1.5) : lv === 1 ? Math.min(dpr, 1.15) : 1);
+renderer.setPixelRatio(pixelRatioFor(GFX.level));
 renderer.shadowMap.enabled = GFX.high;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const maxAniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+const anisoFor = (lv) => (lv === 2 ? maxAniso : lv === 1 ? Math.min(4, maxAniso) : 1);
 const allTex = []; // procedural textures; Low quality turns their anisotropic filtering off
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, 1, 0.5, 3200);
 const WORLD = 800; // half size of the playable plains, meters
 
-const CALM = { top: new THREE.Color(0x4f86cf), hor: new THREE.Color(0xcfe2f1), fog: new THREE.Color(0xc4d6e4), hemi: 0.95, sun: 0.85 };
-const STORM = { top: new THREE.Color(0x1b2026), hor: new THREE.Color(0x56606a), fog: new THREE.Color(0x4b545d), hemi: 0.55, sun: 0.18 };
-scene.fog = new THREE.Fog(CALM.fog.clone(), 120, 1500);
+// Sunset over the plains: deep purple overhead, an orange glow on the western horizon; the
+// supercell darkens everything but the glow under the storm stays
+const CALM = {
+  top: new THREE.Color(0x24163f), hor: new THREE.Color(0xd9684a), glow: new THREE.Color(0xffb04a), fog: new THREE.Color(0x7a4e62),
+  sky: new THREE.Color(0x9a86c8), ground: new THREE.Color(0x3a3426), hemi: 0.78, sun: 1.1
+};
+const STORM = {
+  top: new THREE.Color(0x0f0a18), hor: new THREE.Color(0x6e3430), glow: new THREE.Color(0xff6a24), fog: new THREE.Color(0x3a2836),
+  sky: new THREE.Color(0x5a4a78), ground: new THREE.Color(0x221e18), hemi: 0.46, sun: 0.6
+};
+const FLASH = new THREE.Color(0xe6dcff);
+scene.fog = new THREE.Fog(CALM.fog.clone(), 220, 1900);
 scene.background = CALM.fog.clone();
 
-const hemi = new THREE.HemisphereLight(0xe5eeff, 0x55663f, CALM.hemi);
+const hemi = new THREE.HemisphereLight(CALM.sky.clone(), CALM.ground.clone(), CALM.hemi);
 scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xfff4e0, CALM.sun);
-sun.position.set(300, 500, 160);
+const sun = new THREE.DirectionalLight(0xffa565, CALM.sun);
+sun.position.set(-620, 120, 240); // low in the west: long shadows and a warm rim on everything
 scene.add(sun);
 // the shadow box follows the player's vehicle (see updateVisuals)
 const SUN_DIR = sun.position.clone().normalize();
@@ -463,7 +492,7 @@ const shadows = (obj, cast, receive) => obj.traverse((o) => { if (o.isMesh) { o.
 // soft sky reflection for the vehicles' paint, glass and chrome
 const ENV = (() => {
   const g = new THREE.SphereGeometry(10, 32, 16), pos = g.attributes.position, cols = [];
-  const top = new THREE.Color(0x6f9fd8), hor = new THREE.Color(0xdfe9f2), low = new THREE.Color(0x56633f), c = new THREE.Color();
+  const top = new THREE.Color(0x3a2a62), hor = new THREE.Color(0xe08a5a), low = new THREE.Color(0x2e2c22), c = new THREE.Color();
   for (let i = 0; i < pos.count; i++) {
     const y = pos.getY(i) / 10;
     if (y >= 0) c.copy(hor).lerp(top, Math.pow(y, 0.6)); else c.copy(hor).lerp(low, Math.min(1, -y * 4));
@@ -482,7 +511,7 @@ function canvasTex(w, h, draw, rx, ry) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   draw(c.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx || 1, ry || 1); t.anisotropy = GFX.high ? maxAniso : 1;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx || 1, ry || 1); t.anisotropy = anisoFor(GFX.level);
   allTex.push(t);
   return t;
 }
@@ -503,25 +532,31 @@ const skyCols = new Float32Array(skyGeo.attributes.position.count * 3);
 skyGeo.setAttribute('color', new THREE.BufferAttribute(skyCols, 3));
 const sky = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }));
 scene.add(sky);
-const tmpC1 = new THREE.Color(), tmpC2 = new THREE.Color(), tmpC3 = new THREE.Color();
+const tmpC1 = new THREE.Color(), tmpC2 = new THREE.Color(), tmpC3 = new THREE.Color(), tmpC4 = new THREE.Color();
+const SUN_FLAT = new THREE.Vector2(sun.position.x, sun.position.z).normalize();
 function paintSky(storm, flash) {
   tmpC1.copy(CALM.top).lerp(STORM.top, storm);
   tmpC2.copy(CALM.hor).lerp(STORM.hor, storm);
-  const p = skyGeo.attributes.position;
+  tmpC4.copy(CALM.glow).lerp(STORM.glow, storm);
+  const p = skyGeo.attributes.position, glowK = lerp(1, 0.7, storm);
   for (let i = 0; i < p.count; i++) {
-    const t = clamp(p.getY(i) / 2600, 0, 1);
-    tmpC3.copy(tmpC2).lerp(tmpC1, Math.pow(t, 0.6));
-    if (flash > 0) tmpC3.lerp(new THREE.Color(0xdde6ff), flash * 0.6);
+    const t = clamp(p.getY(i) / 2600, 0, 1), hx = p.getX(i), hz = p.getZ(i), hl = Math.hypot(hx, hz) || 1;
+    tmpC3.copy(tmpC2).lerp(tmpC1, Math.pow(t, 0.55));
+    // the sunset glow: strongest low on the horizon toward the sun
+    const toward = Math.max(0, (hx * SUN_FLAT.x + hz * SUN_FLAT.y) / hl);
+    tmpC3.lerp(tmpC4, Math.pow(toward, 2.5) * Math.pow(1 - t, 4) * glowK);
+    if (flash > 0) tmpC3.lerp(FLASH, flash * 0.55);
     skyCols[i * 3] = tmpC3.r; skyCols[i * 3 + 1] = tmpC3.g; skyCols[i * 3 + 2] = tmpC3.b;
   }
   skyGeo.attributes.color.needsUpdate = true;
   scene.fog.color.copy(CALM.fog).lerp(STORM.fog, storm);
-  if (flash > 0) scene.fog.color.lerp(new THREE.Color(0xc8d4ea), flash * 0.5);
+  if (flash > 0) scene.fog.color.lerp(FLASH, flash * 0.4);
   scene.background.copy(scene.fog.color);
-  scene.fog.near = lerp(160, 60, storm);
-  scene.fog.far = lerp(1700, 900, storm);
+  scene.fog.near = lerp(220, 70, storm);
+  scene.fog.far = lerp(1900, 1000, storm);
+  hemi.color.copy(CALM.sky).lerp(STORM.sky, storm); hemi.groundColor.copy(CALM.ground).lerp(STORM.ground, storm);
   hemi.intensity = lerp(CALM.hemi, STORM.hemi, storm) + flash * 0.9;
-  sun.intensity = lerp(CALM.sun, STORM.sun, storm) + flash * 0.4;
+  sun.intensity = lerp(CALM.sun, STORM.sun, storm) + flash * 0.3;
 }
 
 // soft round sprite for all particle systems
@@ -577,7 +612,9 @@ const ROAD_TEX = canvasTex(256, 1024, (g, w, h) => {
   for (let i = 0; i < 6; i++) { g.strokeStyle = 'rgba(20,20,20,0.5)'; g.lineWidth = 1; g.beginPath(); let x = Math.random() * w, y = Math.random() * h; g.moveTo(x, y); for (let k = 0; k < 6; k++) { x += (Math.random() - 0.5) * 20; y += Math.random() * 20; g.lineTo(x, y); } g.stroke(); }
 });
 const MAT = {
-  grass: lam(0xffffff, { map: GRASS_TEX }), road: lam(0xffffff, { map: ROAD_TEX }), dirt: lam(0x9a8461), dash: lam(0xe6c74a),
+  grass: lam(0xffffff, { map: GRASS_TEX }),
+  // wet asphalt: glossy enough to catch the low sun, headlights and lightning
+  road: new THREE.MeshStandardMaterial({ color: 0xffffff, map: ROAD_TEX, roughness: 0.32, metalness: 0.08, envMap: ENV, envMapIntensity: 0.5 }), dirt: lam(0x9a8461), dash: lam(0xe6c74a),
   house: lam(0xe9e1d2), roofDark: lam(0x4a4f57), barn: lam(0xa33a2c), barnRoof: lam(0x3e3a38), silo: lam(0xb7bcc2),
   trunk: lam(0x5a4632), leaf: lam(0x3f6b34), pole: lam(0x6b5a45), hay: lam(0xd8b45a), fence: lam(0x8a7458)
 };
@@ -735,7 +772,99 @@ for (let i = 0; i < 26; i++) {
   poles.count = bars.count = p;
   poles.castShadow = bars.castShadow = true;
   scene.add(poles, bars);
+  addPowerLine(409, false); // a second line along the east road, a silhouette against the sunset
+  addWires(-WORLD, WORLD, 38, (s) => [s, 9], true);
 }
+
+// a line of poles along a road: alongX runs east-west at z = fixed, otherwise north-south at x = fixed
+function addPowerLine(fixed, alongX) {
+  const n = Math.floor(2 * WORLD / 38) + 1, o = new THREE.Object3D();
+  const poles = new THREE.InstancedMesh(new THREE.BoxGeometry(0.35, 11, 0.35), MAT.pole, n);
+  const bars = new THREE.InstancedMesh(new THREE.BoxGeometry(3.4, 0.25, 0.25), MAT.pole, n);
+  for (let k = 0; k < n; k++) {
+    const t = -WORLD + k * 38, x = alongX ? t : fixed, z = alongX ? fixed : t;
+    o.rotation.set(0, 0, 0); o.position.set(x, 5.5, z); o.updateMatrix(); poles.setMatrixAt(k, o.matrix);
+    o.position.set(x, 10.2, z); o.rotation.set(0, alongX ? Math.PI / 2 : 0, 0); o.updateMatrix(); bars.setMatrixAt(k, o.matrix);
+  }
+  poles.castShadow = bars.castShadow = true;
+  scene.add(poles, bars);
+  addWires(-WORLD, WORLD, 38, (t) => (alongX ? [t, fixed] : [fixed, t]), alongX);
+}
+// three wires sagging between neighbouring poles
+function addWires(from, to, step, at, alongX) {
+  const pts = [];
+  for (let t = from; t + step <= to; t += step) {
+    [-1.5, 0, 1.5].forEach((off) => {
+      for (let k = 0; k < 8; k++) {
+        [k / 8, (k + 1) / 8].forEach((u) => {
+          const [x, z] = at(t + step * u), sag = 1.1 * 4 * u * (1 - u);
+          pts.push(alongX ? x : x + off, 10.3 - sag, alongX ? z + off : z);
+        });
+      }
+    });
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  scene.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x15121a })));
+}
+
+// grass that sways in the wind: instanced tufts on a grid that follows the camera
+const GRASS = (() => {
+  const blade = [], col = [];
+  for (let k = 0; k < 3; k++) {
+    const a = k * Math.PI / 3, cx = Math.cos(a) * 0.07, cz = Math.sin(a) * 0.07, lean = 0.12;
+    blade.push(-cx, 0, -cz, cx, 0, cz, Math.cos(a + 1.2) * lean, 1, Math.sin(a + 1.2) * lean);
+    col.push(0.4, 0.45, 0.35, 0.4, 0.45, 0.35, 0.95, 0.95, 0.8); // darker at the root
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(blade, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.computeVertexNormals();
+  const mat = new THREE.MeshLambertMaterial({ color: 0x5f8a3a, vertexColors: true, side: THREE.DoubleSide });
+  const uniforms = { uTime: { value: 0 }, uWind: { value: new THREE.Vector2(0.1, 0.05) } };
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = uniforms.uTime; sh.uniforms.uWind = uniforms.uWind;
+    sh.vertexShader = 'uniform float uTime;\nuniform vec2 uWind;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      #ifdef USE_INSTANCING
+        vec3 ip = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);
+      #else
+        vec3 ip = vec3(0.0);
+      #endif
+      float gust = 0.6 + 0.5 * sin(uTime * 2.3 + ip.x * 0.35 + ip.z * 0.27) + 0.25 * sin(uTime * 4.1 + ip.z * 0.6);
+      transformed.xz += uWind * gust * position.y * position.y;`);
+  };
+  const state = { mesh: null, n: 0, cx: 1e9, cz: 1e9, uniforms, geo, mat };
+  return state;
+})();
+const GRASS_SPAN = 110; // metres of grass around the camera
+function buildGrass() {
+  if (GRASS.mesh) { scene.remove(GRASS.mesh); GRASS.mesh.dispose(); GRASS.mesh = null; }
+  GRASS.n = [0, 60, 92][GFX.level];
+  if (!GRASS.n) return;
+  GRASS.mesh = new THREE.InstancedMesh(GRASS.geo, GRASS.mat, GRASS.n * GRASS.n);
+  GRASS.mesh.frustumCulled = false;
+  const c = new THREE.Color();
+  for (let i = 0; i < GRASS.n * GRASS.n; i++) { c.setHSL(0.24 + (i * 0.618 % 1) * 0.06, 0.45, 0.32 + (i * 0.382 % 1) * 0.12); GRASS.mesh.setColorAt(i, c); }
+  scene.add(GRASS.mesh); GRASS.cx = GRASS.cz = 1e9;
+}
+function placeGrass(px, pz) {
+  if (!GRASS.mesh) return;
+  const n = GRASS.n, cell = GRASS_SPAN / n, cx = Math.round(px / 10) * 10, cz = Math.round(pz / 10) * 10;
+  if (cx === GRASS.cx && cz === GRASS.cz) return;
+  GRASS.cx = cx; GRASS.cz = cz;
+  const o = new THREE.Object3D();
+  for (let a = 0; a < n; a++) for (let b = 0; b < n; b++) {
+    // world-aligned cells, so tufts stay put as the window moves
+    const ix = Math.floor((cx - GRASS_SPAN / 2) / cell) + a, iz = Math.floor((cz - GRASS_SPAN / 2) / cell) + b;
+    const h1 = cellNoise(ix, iz, 3), h2 = cellNoise(iz, ix, 7);
+    const x = (ix + h1) * cell, z = (iz + h2) * cell;
+    const onRoad = ROADS.some((r) => Math.abs(x - r) < 5.6 || Math.abs(z - r) < 5.6);
+    const sc = onRoad ? 0 : 0.32 + h1 * 0.4;
+    o.position.set(x, 0, z); o.scale.set(sc, sc * (0.8 + h2 * 0.6), sc); o.updateMatrix();
+    GRASS.mesh.setMatrixAt(((ix % n + n) % n) * n + ((iz % n + n) % n), o.matrix);
+  }
+  GRASS.mesh.instanceMatrix.needsUpdate = true;
+}
+buildGrass();
 
 // KHZL Doppler radar tower in the corner of the plains; a violent tornado can knock its dome off
 const radarBulb = (() => {
@@ -779,7 +908,7 @@ const PUFF_TEX = canvasTex(256, 128, (g, w, h) => {
 });
 const puffs = [];
 for (let i = 0; i < 28; i++) {
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: PUFF_TEX, transparent: true, depthWrite: false, fog: false }));
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: PUFF_TEX, color: 0xf2b49a, transparent: true, depthWrite: false, fog: false }));
   const a = srand() * TAU, d = srnd(1000, 2100), sc = srnd(300, 620);
   sp.position.set(Math.cos(a) * d, srnd(240, 480), Math.sin(a) * d); sp.scale.set(sc, sc * 0.5, 1);
   scene.add(sp); puffs.push(sp);
@@ -800,7 +929,7 @@ const rainData = [];
 for (let i = 0; i < RAIN; i++) rainData.push({ x: rnd(-70, 70), y: rnd(-5, 45), z: rnd(-70, 70), v: rnd(30, 40) });
 const rainGeo = new THREE.BufferGeometry();
 rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
-const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xb8c6d4, transparent: true, opacity: 0 }));
+const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xcabbe0, transparent: true, opacity: 0 }));
 rain.frustumCulled = false;
 scene.add(rain);
 
@@ -813,9 +942,106 @@ const shaft = new THREE.Mesh(new THREE.CylinderGeometry(150, 220, 340, 28, 1, tr
 shaft.position.y = 170; shaft.visible = false;
 scene.add(shaft);
 
+// the supercell: tiers of blocky cloud stacked like plates, each turning around the mesocyclone,
+// lit tan by the sunset on the outside and dark underneath; lightning flickers inside
+const SUPER_TIERS = [
+  { y: 318, r: 560, h: 46, c: 0x9c8070 }, { y: 268, r: 470, h: 40, c: 0x7e6a6c }, { y: 226, r: 370, h: 34, c: 0x625262 },
+  { y: 192, r: 270, h: 28, c: 0x4a3e4e }, { y: 166, r: 180, h: 22, c: 0x3a3242 }
+];
+const superMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0, fog: false });
+const supercell = new THREE.Group(); supercell.visible = false; scene.add(supercell);
+const superTiers = SUPER_TIERS.map((t, ti) => {
+  const n = Math.ceil(TAU * t.r / 46), depth = t.r * 0.32, g = new THREE.Group(), o = new THREE.Object3D(), c = new THREE.Color();
+  const ring = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), superMat, n);
+  for (let k = 0; k < n; k++) {
+    const a = (k + srnd(-0.2, 0.2)) / n * TAU, rr = t.r - depth / 2 + srnd(-depth * 0.15, depth * 0.2);
+    o.position.set(Math.cos(a) * rr, t.y + srnd(-t.h * 0.2, t.h * 0.2), Math.sin(a) * rr);
+    o.rotation.set(0, -a, 0);
+    o.scale.set(depth * srnd(0.7, 1.1), t.h * srnd(0.7, 1.3), TAU * t.r / n * srnd(1.05, 1.3));
+    o.updateMatrix(); ring.setMatrixAt(k, o.matrix);
+    ring.setColorAt(k, c.setHex(t.c).multiplyScalar(srnd(0.85, 1.12)));
+  }
+  const fill = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 10), superMat, 1);
+  o.position.set(0, t.y - t.h * 0.1, 0); o.rotation.set(0, 0, 0); o.scale.set(t.r * 0.72, t.h * 0.7, t.r * 0.72); o.updateMatrix();
+  fill.setMatrixAt(0, o.matrix); fill.setColorAt(0, c.setHex(t.c).multiplyScalar(0.7));
+  g.add(ring, fill); supercell.add(g);
+  return { g, spin: 0.05 + ti * 0.025 };
+});
+// one light for lightning (in the cloud or a strike), placed wherever the flash is
+const boltLight = new THREE.PointLight(0xd6ccff, 0, 1400, 1.2); scene.add(boltLight);
+let cloudFlashT = 0, nextCloudFlash = 1.5;
+function updateSupercell(dt, time) {
+  const src = T.active ? T : G.cell;
+  const form = T.active ? 1 : G.phase === 'build' ? clamp(1 - G.phaseT / BUILD_T, 0, 1) : 0;
+  supercell.visible = !!src && form > 0.01;
+  if (supercell.visible) {
+    supercell.position.set(src.x, 0, src.z);
+    const sc = lerp(0.55, 1, form); supercell.scale.set(sc, 1, sc);
+    superMat.opacity = Math.min(1, form * 1.6);
+    superTiers.forEach((t) => { t.g.rotation.y += dt * t.spin; });
+    // lightning inside the cloud: the tiers light up purple-white for a moment
+    nextCloudFlash -= dt;
+    if (nextCloudFlash <= 0 && form > 0.3) {
+      nextCloudFlash = rnd(0.6, 3.2) / (0.5 + form);
+      cloudFlashT = 0.16;
+      const t = SUPER_TIERS[Math.floor(rnd(1, 5))], a = rnd(0, TAU);
+      boltLight.position.set(src.x + Math.cos(a) * t.r * 0.6 * sc, t.y - 10, src.z + Math.sin(a) * t.r * 0.6 * sc);
+      cloudBolt(boltLight.position, t.r * 0.5 * sc);
+    }
+  }
+  cloudFlashT = Math.max(0, cloudFlashT - dt);
+  const k = Math.max(cloudFlashT / 0.16, boltT / 0.22);
+  superMat.emissive.setRGB(0.55, 0.5, 0.8).multiplyScalar(k * 0.8 * (0.6 + Math.random() * 0.4));
+  boltLight.intensity = GFX.level >= 1 ? k * (boltT > 0 ? 2.2 : 1.2) : 0;
+  if (cloudFlashT <= 0 && boltT <= 0) cloudBolts.visible = false;
+}
+// a short forked bolt crawling along the underside of a cloud tier
+const cloudBolts = new THREE.Group(); cloudBolts.visible = false; scene.add(cloudBolts);
+function cloudBolt(at, spread) {
+  cloudBolts.children.slice().forEach((m) => { cloudBolts.remove(m); m.geometry.dispose(); });
+  let p = at.clone(); const dir = rnd(0, TAU);
+  for (let k = 0; k < 7; k++) {
+    const q = new THREE.Vector3(p.x + Math.cos(dir + rnd(-0.8, 0.8)) * spread / 6, p.y - rnd(2, 9), p.z + Math.sin(dir + rnd(-0.8, 0.8)) * spread / 6);
+    const len = p.distanceTo(q), m = new THREE.Mesh(new THREE.BoxGeometry(1.2, len, 1.2), BOLT_MAT);
+    m.position.copy(p).add(q).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), q.clone().sub(p).normalize());
+    cloudBolts.add(m); p = q;
+  }
+  cloudBolts.visible = true;
+}
+
+// the low sun itself, a soft orange disc on the western horizon
+const sunDisc = new THREE.Sprite(new THREE.SpriteMaterial({ map: SOFT, color: 0xffb060, transparent: true, depthWrite: false, fog: false, blending: THREE.AdditiveBlending }));
+sunDisc.scale.set(520, 520, 1); scene.add(sunDisc);
+
+// the player's headlights (two spot beams) and glows for the headlamps and the roof beacon
+const GLOW = (color, size) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: SOFT, color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); s.scale.set(size, size, 1); scene.add(s); return s; };
+const headBeams = [-1, 1].map(() => {
+  const l = new THREE.SpotLight(0xfff0d0, 1.3, 70, 0.38, 0.6, 1.6); l.castShadow = false;
+  scene.add(l, l.target); return l;
+});
+const headGlows = [-1, 1].map(() => GLOW(0xfff2d8, 2.4));
+const beaconGlow = GLOW(0xffa23a, 3.2);
+function updateVehicleLights(time) {
+  const c = G.car, v = VEHICLES[G.vehicle], L = v.lamps, sh = Math.sin(c.h), ch = Math.cos(c.h);
+  const at = (lx, ly, lz) => [c.x + lx * ch + lz * sh, ly + c.lift - 0.22 * smooth(G.hyd.susp), c.z - lx * sh + lz * ch];
+  [-1, 1].forEach((s, i) => {
+    const [x, y, z] = at(s * L.x, L.y, L.z);
+    headGlows[i].position.set(x, y, z);
+    headBeams[i].position.set(x, y, z);
+    headBeams[i].target.position.set(x + sh * 40, 0, z + ch * 40);
+    headBeams[i].visible = GFX.level >= 1;
+  });
+  // warning lights: amber lamps blink, the roof beacon flashes
+  const blink = (time * 2.2) % 1 < 0.5;
+  TRUCK.amber.color.setHex(blink ? 0xffb04a : 0x3a2410);
+  const [bx, by, bz] = at(0, L.roof, L.z * 0.1);
+  beaconGlow.position.set(bx, by, bz);
+  beaconGlow.material.opacity = 0.35 + 0.65 * Math.max(0, Math.sin(time * 9));
+}
+
 // lightning bolt: a jagged chain of thin glowing boxes from the cloud base to the ground
 const bolt = new THREE.Group(); bolt.visible = false; scene.add(bolt);
-const BOLT_MAT = new THREE.MeshBasicMaterial({ color: 0xeef3ff, fog: false });
+const BOLT_MAT = new THREE.MeshBasicMaterial({ color: 0xf2eaff, fog: false });
 let boltT = 0;
 function strike(cx, cz) {
   bolt.children.slice().forEach((m) => { bolt.remove(m); m.geometry.dispose(); });
@@ -835,6 +1061,7 @@ function strike(cx, cz) {
     p = q;
   }
   bolt.visible = true; boltT = 0.22;
+  boltLight.position.set(p.x, 120, p.z);
   RAD.strikes.push({ x: p.x, z: p.z, t: 25 });
 }
 
@@ -1583,10 +1810,10 @@ function toPBR(dict) {
 // Vehicles in the garage. maxF is top speed in m/s; dmg and push scale armor damage and wind
 // shove; fuelUse scales how fast the tank empties; paint lists [material, shade] pairs to recolor.
 const VEHICLES = [
-  { id: 'tiv2', name: 'TIV2', stats: 'Top speed 58 mph · Holds 235 mph locked · Slow deploy', build: buildTruck, maxF: 26, dmg: 1, push: 1, fuelUse: 1, resist: 235, deploy: 0.7, paint: [[TRUCK.body, 1], [TRUCK.panel, 0.85]] },
-  { id: 'joker1', name: 'Joker 1', stats: 'Top speed 69 mph · Holds 185 mph locked · Fast deploy', build: buildJoker, maxF: 31, dmg: 1.25, push: 1.2, fuelUse: 1.2, resist: 185, deploy: 1.25, paint: [[JOKER.body, 1], [JOKER.panel, 1.2]] },
-  { id: 'joker2', name: 'Joker 2', stats: 'Top speed 51 mph · Holds 210 mph locked · Heaviest armor', build: buildJoker2, maxF: 23, dmg: 0.8, push: 0.8, fuelUse: 1.3, resist: 210, deploy: 1, paint: [[JOKER2.body, 1], [JOKER2.skirt, 0.8], [JOKER2.panel, 1.15]] },
-  { id: 'radar', name: 'Radar Truck', stats: 'Top speed 60 mph · Scans storms · Holds 140 mph locked', build: buildRadarTruck, maxF: 27, dmg: 1.6, push: 1.4, fuelUse: 0.9, resist: 140, deploy: 1, canScan: true, paint: [[RADAR.cab, 1]] }
+  { id: 'tiv2', name: 'TIV2', stats: 'Top speed 58 mph · Holds 235 mph locked · Slow deploy', build: buildTruck, maxF: 26, dmg: 1, push: 1, fuelUse: 1, resist: 235, deploy: 0.7, lamps: { x: 0.36, y: 0.62, z: 3.85, roof: 3.0 }, paint: [[TRUCK.body, 1], [TRUCK.panel, 0.85]] },
+  { id: 'joker1', name: 'Joker 1', stats: 'Top speed 69 mph · Holds 185 mph locked · Fast deploy', build: buildJoker, maxF: 31, dmg: 1.25, push: 1.2, fuelUse: 1.2, resist: 185, deploy: 1.25, lamps: { x: 0.83, y: 1.05, z: 3.92, roof: 3.15 }, paint: [[JOKER.body, 1], [JOKER.panel, 1.2]] },
+  { id: 'joker2', name: 'Joker 2', stats: 'Top speed 51 mph · Holds 210 mph locked · Heaviest armor', build: buildJoker2, maxF: 23, dmg: 0.8, push: 0.8, fuelUse: 1.3, resist: 210, deploy: 1, lamps: { x: 0.62, y: 1.75, z: 2.9, roof: 2.75 }, paint: [[JOKER2.body, 1], [JOKER2.skirt, 0.8], [JOKER2.panel, 1.15]] },
+  { id: 'radar', name: 'Radar Truck', stats: 'Top speed 60 mph · Scans storms · Holds 140 mph locked', build: buildRadarTruck, maxF: 27, dmg: 1.6, push: 1.4, fuelUse: 0.9, resist: 140, deploy: 1, lamps: { x: 0.85, y: 1.25, z: 3.38, roof: 3.05 }, canScan: true, paint: [[RADAR.cab, 1]] }
 ];
 VEHICLES.forEach((v) => v.paint.forEach((p) => p.push(p[0].color.getHex())));
 const fleet = {};
@@ -1707,7 +1934,8 @@ function paintPoints(pts, data, shade) {
   pts.geometry.attributes.color.needsUpdate = true;
 }
 // a pale condensation funnel reads clearly against the dark storm sky
-paintPoints(funnel, funData, (i) => { const g = 0.62 - funData[i].h * 0.22 + rnd(-0.05, 0.05); return [g, g + 0.02, g + 0.05]; });
+// smoky grey-brown funnel, darker toward the cloud
+paintPoints(funnel, funData, (i) => { const g = 0.5 - funData[i].h * 0.2 + rnd(-0.07, 0.07); return [g + 0.03, g, g - 0.02]; });
 paintPoints(cloud, cloudData, () => { const g = rnd(0.12, 0.19); return [g, g + 0.01, g + 0.025]; });
 paintPoints(dust, dustData, () => { const g = rnd(0.26, 0.36); return [g + 0.07, g, g - 0.06]; });
 
@@ -1783,7 +2011,7 @@ function shapeFunnel(mesh, H, hb, ringAt) {
   }
   g.attributes.position.needsUpdate = true;
 }
-const funnelMat = () => new THREE.MeshLambertMaterial({ map: FUNNEL_TEX, color: 0xd5dae0, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, fog: false });
+const funnelMat = () => new THREE.MeshLambertMaterial({ map: FUNNEL_TEX, color: 0x9a918c, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, fog: false });
 const funnelMesh = new THREE.Mesh(funnelGeometry(32, 28), funnelMat());
 funnelMesh.frustumCulled = false; funnelMesh.visible = false; scene.add(funnelMesh);
 // suction vortices orbiting inside multi-vortex and barrel tornadoes
@@ -1793,7 +2021,37 @@ for (let k = 0; k < 5; k++) {
   m.frustumCulled = false; m.visible = false; scene.add(m); subMeshes.push(m);
 }
 
+// debris: boards, sheet metal and bits of barn tumbling around the lower funnel
+const DEBRIS_MAX = 160;
+const debris = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.18, 0.5), lam(0xffffff), DEBRIS_MAX);
+debris.frustumCulled = false; debris.visible = false; scene.add(debris);
+const debrisData = [];
+{
+  const c = new THREE.Color(), cols = [0x6a4a32, 0x8a6a48, 0x5a5a5e, 0x7a2e24, 0x3a3630];
+  for (let i = 0; i < DEBRIS_MAX; i++) {
+    debrisData.push({ h: Math.pow(Math.random(), 1.6), a: rnd(0, TAU), rf: rnd(0.7, 2.3), s: rnd(0.5, 2.2), rx: rnd(-4, 4), ry: rnd(-4, 4), rz: rnd(-4, 4) });
+    debris.setColorAt(i, c.setHex(cols[i % cols.length]).multiplyScalar(rnd(0.8, 1.2)));
+  }
+}
+const debrisCount = () => [40, 90, 160][GFX.level];
+function updateDebris(dt, time) {
+  debris.visible = T.active && T.inten > 0.2 && T.ground > 0.3;
+  if (!debris.visible) return;
+  const o = new THREE.Object3D(), n = debrisCount(), top = 30 + T.ef * 12;
+  debris.count = n;
+  for (let i = 0; i < n; i++) {
+    const d = debrisData[i];
+    d.a += dt * (2.2 + T.ef * 0.3) / d.rf;
+    const r = T.R * d.rf * (0.7 + 0.3 * T.inten);
+    o.position.set(T.x + Math.cos(d.a) * r, 1 + d.h * top + Math.sin(time * 1.3 + i) * 2, T.z + Math.sin(d.a) * r);
+    o.rotation.set(time * d.rx, time * d.ry, time * d.rz);
+    o.scale.setScalar(d.s); o.updateMatrix(); debris.setMatrixAt(i, o.matrix);
+  }
+  debris.instanceMatrix.needsUpdate = true;
+}
+
 function updateTornadoVisuals(dt, time) {
+  updateDebris(dt, time);
   const on = T.active && T.inten > 0.01;
   funnel.visible = cloud.visible = dust.visible = funnelMesh.visible = on;
   subMeshes.forEach((m) => { m.visible = false; });
@@ -2430,7 +2688,7 @@ function updatePhase(dt) {
   // lightning
   if (G.storm > 0.5) {
     G.nextBolt -= dt;
-    if (G.nextBolt <= 0) { G.nextBolt = rnd(4, 11); G.flash = 1; strike(G.car.x, G.car.z); setTimeout(() => AudioFX.thunder(), rnd(200, 1800)); }
+    if (G.nextBolt <= 0) { G.nextBolt = rnd(4, 11); G.flash = 1; { const src = (T.active ? T : G.cell) || G.car; strike(src.x, src.z); } setTimeout(() => AudioFX.thunder(), rnd(200, 1800)); }
   }
   G.flash = Math.max(0, G.flash - dt * 3.2);
 }
@@ -2491,13 +2749,26 @@ function updateVisuals(dt, time, w) {
   G.camShake = Math.max(0, G.camShake - dt * 1.5);
   camera.lookAt(lookSm);
 
-  // sun and its shadow box follow the vehicle
+  // sun and its shadow box follow the vehicle; the sun disc sits on the horizon
   sun.position.set(c.x + SUN_DIR.x * 600, SUN_DIR.y * 600, c.z + SUN_DIR.z * 600);
+  sunDisc.position.set(camera.position.x + SUN_DIR.x * 2300, SUN_DIR.y * 2300 * 0.45, camera.position.z + SUN_DIR.z * 2300);
+  sunDisc.material.opacity = lerp(0.95, 0.35, G.storm);
+  updateSupercell(dt, time);
+  updateVehicleLights(time);
+  placeGrass(camera.position.x, camera.position.z);
+  GRASS.uniforms.uTime.value = time;
+  {
+    // a breeze always, the tornado's inflow near the storm
+    const k = 0.08 + clamp(w.ms / 45, 0, 0.9) * 0.6;
+    GRASS.uniforms.uWind.value.set((w.ms > 1 ? w.x : 0.7) * k, (w.ms > 1 ? w.z : 0.3) * k);
+  }
+  // the road gets wetter and glossier as the rain comes down
+  MAT.road.roughness = lerp(0.34, 0.1, G.storm); MAT.road.envMapIntensity = lerp(0.5, 0.95, G.storm) + G.flash;
   sun.target.position.set(c.x, 0, c.z); sun.target.updateMatrixWorld();
   const envK = lerp(0.55, 0.2, G.storm) + G.flash * 0.6;
   pbrMats.forEach((m) => { m.envMapIntensity = envK; });
   // fair-weather clouds fade out, the ground gets darker as it soaks up the rain
-  puffs.forEach((p) => { p.material.opacity = clamp(1 - G.storm * 2.6, 0, 1) * 0.95; p.visible = GFX.high && p.material.opacity > 0.01; });
+  puffs.forEach((p) => { p.material.opacity = clamp(1 - G.storm * 2.6, 0, 1) * 0.95; p.visible = GFX.level >= 1 && p.material.opacity > 0.01; });
   const wet = lerp(1, 0.68, G.storm);
   wetMats.forEach(([m, col]) => { m.color.setHex(col).multiplyScalar(wet); });
   // rain shaft in the storm's core
@@ -2514,7 +2785,7 @@ function updateVisuals(dt, time, w) {
   // sky, cloud deck, rain
   paintSky(G.storm, G.flash);
   deck.material.opacity = G.storm * 0.9;
-  deck.material.color.setHex(G.flash > 0.2 ? 0x5a6474 : 0x262b31);
+  deck.material.color.setHex(G.flash > 0.2 ? 0x6a5a86 : 0x2a2030);
   deck.position.x = camera.position.x; deck.position.z = camera.position.z;
   sky.position.copy(camera.position);
   rain.material.opacity = G.storm * 0.55;
@@ -2860,6 +3131,13 @@ function updateHUD(dt, w, time) {
   const mph = w.ms * 2.237;
   el.windBar.style.width = clamp(mph / 230 * 100, 0, 100) + '%';
   el.windVal.textContent = Math.round(mph) + ' mph';
+  // telemetry readout: speed, wind at the truck, distance to the tornado (or the storm, or the risk area)
+  $('tmSpeed').textContent = Math.round(Math.abs(c.speed) * 2.237);
+  $('tmWind').textContent = Math.round(mph);
+  {
+    const tgt = T.active ? T : G.cell || (G.phase === 'calm' && G.plan ? G.plan.risk : null);
+    $('tmDist').textContent = tgt ? `${(Math.hypot(tgt.x - c.x, tgt.z - c.z) / 1609).toFixed(2)} MILES` : '--';
+  }
   el.probeCount.textContent = career.probes + ' left';
 
   // status line + guide arrow toward the risk area, the supercell or the tornado
@@ -3148,18 +3426,29 @@ document.querySelectorAll('#levelSeg button').forEach((b) => {
     document.querySelectorAll('#levelSeg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
   });
 });
-function setGfx(high) {
-  GFX.high = high; store.set('tiv2-gfx', high ? 'high' : 'low');
-  renderer.setPixelRatio(high ? Math.min(dpr, 1.5) : 1);
-  renderer.shadowMap.enabled = high;
-  allTex.forEach((t) => { t.anisotropy = high ? maxAniso : 1; t.needsUpdate = true; });
+function setGfx(level) {
+  GFX.level = level; GFX.high = level === 2; store.set('tiv2-gfx', GFX_NAMES[level]);
+  renderer.setPixelRatio(pixelRatioFor(level));
+  renderer.shadowMap.enabled = GFX.high;
+  allTex.forEach((t) => { t.anisotropy = anisoFor(level); t.needsUpdate = true; });
   scene.traverse((o) => { if (o.material) [].concat(o.material).forEach((m) => { m.needsUpdate = true; }); });
   pbrMats.forEach((m) => { m.needsUpdate = true; });
-  document.querySelectorAll('#gfxSeg button').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.gfx === 'high') === high)));
+  buildGrass();
+  syncGfxButtons();
   resize();
 }
-document.querySelectorAll('#gfxSeg button').forEach((b) => b.addEventListener('click', () => setGfx(b.dataset.gfx === 'high')));
-document.querySelectorAll('#gfxSeg button').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.gfx === 'high') === GFX.high)));
+function syncGfxButtons() { document.querySelectorAll('.gfx-seg button').forEach((b) => b.setAttribute('aria-pressed', String(GFX_NAMES.indexOf(b.dataset.gfx) === GFX.level))); }
+document.querySelectorAll('.gfx-seg button').forEach((b) => b.addEventListener('click', () => setGfx(GFX_NAMES.indexOf(b.dataset.gfx))));
+syncGfxButtons();
+// if the game runs slowly while chasing, step the quality down one level at a time
+const perf = { t: 0, frames: 0, on: store.get('tiv2-gfx-auto', true) };
+function watchFrameRate(realDt) {
+  if (!perf.on || GFX.level === 0) return;
+  perf.t += realDt; perf.frames++;
+  if (perf.t < 5) return;
+  const fps = perf.frames / perf.t; perf.t = 0; perf.frames = 0;
+  if (fps < 24) { setGfx(GFX.level - 1); toast(`Graphics set to ${GFX_NAMES[GFX.level]} to keep the game smooth`, 2600); }
+}
 $('btnStart').addEventListener('click', () => {
   AudioFX.init(); if (AudioFX.ctx && AudioFX.ctx.state === 'suspended') AudioFX.ctx.resume();
   $('startOverlay').hidden = true;
@@ -3172,12 +3461,14 @@ let last = performance.now();
 const clock0 = performance.now();
 function frame(now) {
   requestAnimationFrame(frame);
-  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const realDt = (now - last) / 1000;
+  const dt = Math.min(0.05, realDt); last = now;
   const time = (now - clock0) / 1000;
   let w = windAt(G.car.x, G.car.z);
   const sim = G.running && !G.paused && chasing();
   const showroom = !G.running || G.phase === 'base';
   if (sim) {
+    watchFrameRate(realDt);
     updatePhase(dt);
     updateTornado(dt);
     updateHydraulics(dt);
