@@ -22,6 +22,16 @@ In the base, **Shop → Admin** opens a PIN-locked panel (you create the PIN the
 any amount of money, set the money to an exact amount, or switch on **Unlimited money** so everything
 in the shop and garage is free. The PIN is stored on the device, so it only keeps casual players out.
 
+## Tornado types
+
+Every tornado gets a type that fits its EF rating, after the Twisted wiki: rope, funnel, floating,
+cone, sidewinder, stovepipe, drillbit, multi-vortex, wedge and barrel. Each has its own funnel shape
+and wind field: sidewinders swing side to side, floating funnels dangle until they touch down,
+multi-vortex and barrel tornadoes have orbiting suction vortices with extra-strong gusts, drillbits
+have a tiny wind field, and wedges are huge. Cones and sidewinders earn more data on camera, wedges
+pay the most for probes. Stovepipes can grow into cones or wedges, drillbits often start as
+multi-vortex, and every tornado ropes out before it dies.
+
 ## Vehicles
 
 | Vehicle | Top speed | Notes |

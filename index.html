@@ -1547,7 +1547,10 @@ const G = {
   view: 0, camShake: 0,
   stats: { closest: Infinity, intercept: false, probeHits: 0, rec: 0, scan: 0 }
 };
-const T = { active: false, x: 0, z: 0, ef: 0, R: 20, H: 300, inten: 0, age: 0, life: 90, yaw: 0, yawVel: 0, speed: 9, hitPlayer: false };
+const T = {
+  active: false, x: 0, z: 0, ef: 0, R: 20, R0: 20, H: 300, inten: 0, age: 0, life: 90, yaw: 0, yawVel: 0, speed: 9, hitPlayer: false,
+  type: 'cone', prevType: 'cone', type0: 'cone', blend: 1, morphTo: null, morphAt: 0, roped: false, ground: 1, touchAt: 0, subs: [], subA: 0, subK: 0
+};
 
 const vehicleState = (v) => {
   v = v || VEHICLES[G.vehicle];
@@ -1633,51 +1636,125 @@ const FUNNEL_TEX = canvasTex(256, 256, (g, w, h) => {
   g.globalCompositeOperation = 'destination-in'; g.fillStyle = fade; g.fillRect(0, 0, w, h);
 }, 3, 1);
 FUNNEL_TEX.flipY = false;
-const funnelMesh = (() => {
-  const prof = [];
-  for (let i = 0; i <= 28; i++) { const h = i / 28; prof.push(new THREE.Vector2((0.32 + 2.7 * Math.pow(h, 2.3)) * 0.6, h)); }
-  const m = new THREE.Mesh(new THREE.LatheGeometry(prof, 32), new THREE.MeshLambertMaterial({
-    map: FUNNEL_TEX, color: 0xd5dae0, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, fog: false
-  }));
-  m.visible = false; scene.add(m);
-  return m;
-})();
+// Tornado types from the Twisted wiki. prof(h) is the funnel radius at height h (0 ground,
+// 1 cloud base) in units of the wind core radius T.R; wind scales that core radius from its EF
+// size; sway is the side-to-side bend of a sidewinder, bend the gentle snaking of a rope;
+// film and probe scale the data earned; height lowers the cloud base of very wide tornadoes.
+const TORNADO_TYPES = {
+  rope:        { name: 'Rope', prof: (h) => 0.12 + 0.55 * Math.pow(h, 6), wind: 0.6, sway: 0.15, bend: 0.35, film: 1.2, probe: 1, wander: 1 },
+  funnel:      { name: 'Funnel', prof: (h) => 0.1 + 1.9 * Math.pow(h, 3), wind: 0.8, sway: 0.1, bend: 0.12, film: 0.8, probe: 1, wander: 1 },
+  floating:    { name: 'Floating', prof: (h) => 0.25 + 1.4 * Math.pow(h, 2.2), wind: 0.9, sway: 0.1, bend: 0.12, film: 1.1, probe: 1, wander: 1, floats: true },
+  cone:        { name: 'Cone', prof: (h) => 0.2 + 1.6 * Math.pow(h, 2.3), wind: 1, sway: 0.1, bend: 0.08, film: 1.4, probe: 1, wander: 1 },
+  sidewinder:  { name: 'Sidewinder', prof: (h) => 0.35 + 0.9 * Math.pow(h, 2), wind: 1, sway: 1.1, bend: 0.1, film: 1.4, probe: 1, wander: 1.3 },
+  stovepipe:   { name: 'Stovepipe', prof: (h) => 0.75 + 0.35 * Math.pow(h, 4), wind: 1.2, sway: 0.08, bend: 0.06, film: 1, probe: 1.2, wander: 1, next: (ef) => (ef >= 4 ? 'wedge' : 'cone') },
+  drillbit:    { name: 'Drillbit', prof: (h) => 0.15 + 0.3 * Math.pow(h, 3), wind: 0.5, sway: 0.12, bend: 0.2, film: 1.2, probe: 0.8, wander: 0.8 },
+  multivortex: { name: 'Multi-vortex', prof: (h) => 0.7 + 1.0 * Math.pow(h, 2), wind: 1.4, sway: 0.05, bend: 0.05, film: 0.8, probe: 1.2, wander: 2.2, subs: 5, ghost: true },
+  wedge:       { name: 'Wedge', prof: (h) => 1.05 + 0.3 * Math.pow(h, 1.5), wind: 2.4, sway: 0.03, bend: 0.03, film: 0.7, probe: 1.8, wander: 1, height: 0.75 },
+  barrel:      { name: 'Barrel', prof: (h) => 1.0 + 0.2 * Math.pow(h, 4), wind: 2.0, sway: 0.03, bend: 0.03, film: 0.7, probe: 1.5, wander: 1, subs: 4, height: 0.85 }
+};
+// which types each EF rating can produce: [type, lowest EF, highest EF, weight]
+const TYPE_POOL = [
+  ['rope', 0, 2, 5], ['funnel', 0, 2, 3], ['floating', 0, 3, 2], ['cone', 0, 5, 6], ['sidewinder', 1, 4, 3],
+  ['stovepipe', 2, 5, 4], ['drillbit', 2, 5, 2], ['multivortex', 3, 5, 3], ['wedge', 3, 5, 4], ['barrel', 4, 5, 2]
+];
+function pickType(ef) {
+  const pool = TYPE_POOL.filter(([, a, b]) => ef >= a && ef <= b);
+  let r = Math.random() * pool.reduce((t, x) => t + x[3], 0);
+  for (const x of pool) { r -= x[3]; if (r <= 0) return x[0]; }
+  return 'cone';
+}
+
+// a funnel surface whose rings are re-laid every frame: any profile, bent sideways
+function funnelGeometry(radial, rings) {
+  const g = new THREE.BufferGeometry(), n = (rings + 1) * (radial + 1);
+  const nor = new Float32Array(n * 3), uv = new Float32Array(n * 2), idx = [];
+  for (let j = 0; j <= rings; j++) for (let i = 0; i <= radial; i++) {
+    const k = j * (radial + 1) + i, a = i / radial * TAU;
+    nor[k * 3] = Math.cos(a); nor[k * 3 + 2] = Math.sin(a);
+    uv[k * 2] = i / radial; uv[k * 2 + 1] = j / rings;
+    if (j < rings && i < radial) { const up = k + radial + 1; idx.push(k, up, k + 1, up, up + 1, k + 1); }
+  }
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.userData = { radial, rings };
+  return g;
+}
+// ring j sits at height h = hb + (1 - hb) * j / rings (hb hides the bottom of a lifted funnel);
+// ringAt(h) gives [centre x, centre z, radius]
+function shapeFunnel(mesh, H, hb, ringAt) {
+  const g = mesh.geometry, { radial, rings } = g.userData, p = g.attributes.position.array;
+  for (let j = 0; j <= rings; j++) {
+    const h = hb + (1 - hb) * j / rings, [cx, cz, r] = ringAt(h), y = h * H;
+    for (let i = 0; i <= radial; i++) {
+      const a = i / radial * TAU, k = (j * (radial + 1) + i) * 3;
+      p[k] = cx + Math.cos(a) * r; p[k + 1] = y; p[k + 2] = cz + Math.sin(a) * r;
+    }
+  }
+  g.attributes.position.needsUpdate = true;
+}
+const funnelMat = () => new THREE.MeshLambertMaterial({ map: FUNNEL_TEX, color: 0xd5dae0, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, fog: false });
+const funnelMesh = new THREE.Mesh(funnelGeometry(32, 28), funnelMat());
+funnelMesh.frustumCulled = false; funnelMesh.visible = false; scene.add(funnelMesh);
+// suction vortices orbiting inside multi-vortex and barrel tornadoes
+const subMeshes = [];
+for (let k = 0; k < 5; k++) {
+  const m = new THREE.Mesh(funnelGeometry(12, 16), funnelMat());
+  m.frustumCulled = false; m.visible = false; scene.add(m); subMeshes.push(m);
+}
 
 function updateTornadoVisuals(dt, time) {
   const on = T.active && T.inten > 0.01;
   funnel.visible = cloud.visible = dust.visible = funnelMesh.visible = on;
+  subMeshes.forEach((m) => { m.visible = false; });
   if (!on) return;
-  {
-    const condense = clamp(0.1 - T.ef * 0.025, 0, 0.1) * (1.5 - T.inten * 0.5);
-    const rs = T.R * (0.55 + 0.45 * T.inten);
-    funnelMesh.position.set(T.x, condense * T.H, T.z);
-    funnelMesh.scale.set(rs, T.H * (1 - condense), rs);
-    funnelMesh.material.opacity = 0.62 * T.inten;
-    FUNNEL_TEX.offset.x -= dt * (0.5 + T.ef * 0.08);
-  }
-  const inten = T.inten, R = T.R, H = T.H;
-  const fp = funnel.geometry.attributes.position.array;
+  const A = TORNADO_TYPES[T.prevType], B = TORNADO_TYPES[T.type], b = smooth(T.blend);
+  const inten = T.inten, R = T.R, H = T.H * lerp(A.height || 1, B.height || 1, b);
+  const grow = 0.55 + 0.45 * inten;
+  const radius = (h) => lerp(A.prof(h), B.prof(h), b) * R * grow;
+  // the funnel bends across its track: a sidewinder swings side to side, a rope snakes
+  const sway = lerp(A.sway, B.sway, b), bend = lerp(A.bend, B.bend, b), S = Math.max(T.R0, 22) * 1.4;
+  const px = -Math.sin(T.yaw), pz = Math.cos(T.yaw);
+  const off = (h) => sway * S * Math.sin(Math.PI * h) * Math.sin(time * 1.6 + h * 2) + bend * S * Math.sin(time * 0.7 + h * 5) * h;
   const condense = clamp(0.1 - T.ef * 0.025, 0, 0.1) * (1.5 - inten * 0.5);
+  const hb = lerp(0.6, condense, T.ground); // a floating funnel dangles until it touches down
+  const mainVis = lerp(A.ghost ? 0.2 : 1, B.ghost ? 0.2 : 1, b); // a multi-vortex's main funnel is nearly invisible
+  shapeFunnel(funnelMesh, H, hb, (h) => { const o = off(h); return [T.x + px * o, T.z + pz * o, radius(h)]; });
+  funnelMesh.material.opacity = 0.62 * inten * mainVis;
+  FUNNEL_TEX.offset.x -= dt * (0.5 + T.ef * 0.08);
+  const subAt = (s, h) => [s.x + (T.x - s.x) * h * 0.6, s.z + (T.z - s.z) * h * 0.6, T.R * 0.12 * (1 + 2.2 * Math.pow(h, 3)) * grow];
+  if (T.subK > 0.01) {
+    T.subs.forEach((s, k) => {
+      const m = subMeshes[k]; if (!m) return;
+      m.visible = true;
+      shapeFunnel(m, H, hb, (h) => subAt(s, h));
+      m.material.opacity = 0.75 * inten * T.subK;
+    });
+  }
+
+  const fp = funnel.geometry.attributes.position.array;
+  const nSub = T.subK > 0.5 ? T.subs.length : 0;
   for (let i = 0; i < FUN_N; i++) {
-    const d = funData[i];
-    const h = d.h;
+    const d = funData[i], h = d.h;
     d.a += dt * (2.6 + T.ef * 0.35) * (1.25 - h * 0.7);
-    const rr = R * (0.32 + 2.7 * Math.pow(h, 2.3)) * (0.55 + 0.45 * inten) * d.j;
-    const wob = Math.sin(time * 0.7 + h * 4) * R * 0.4 * h;
-    const hide = h < condense ? -9999 : 0;
-    fp[i * 3] = T.x + Math.cos(d.a) * rr * 0.6 + wob;
+    let cx, cz, rr;
+    if (nSub && i % 4) { [cx, cz, rr] = subAt(T.subs[i % nSub], h); rr *= d.j; }
+    else { const o = off(h); cx = T.x + px * o; cz = T.z + pz * o; rr = radius(h) * d.j; }
+    const hide = h < hb ? -9999 : 0;
+    fp[i * 3] = cx + Math.cos(d.a) * rr;
     fp[i * 3 + 1] = h * H + hide;
-    fp[i * 3 + 2] = T.z + Math.sin(d.a) * rr * 0.6;
+    fp[i * 3 + 2] = cz + Math.sin(d.a) * rr;
   }
   funnel.geometry.attributes.position.needsUpdate = true;
-  funnel.material.opacity = 0.82 * inten;
-  funnel.material.size = 15 + T.ef * 3.5;
+  funnel.material.opacity = 0.82 * inten * (nSub ? 1 : mainVis);
+  funnel.material.size = (15 + T.ef * 3.5) * clamp(R / 40, 0.6, 2.5);
 
   const cp = cloud.geometry.attributes.position.array;
   for (let i = 0; i < CLOUD_N; i++) {
     const d = cloudData[i];
     d.a += dt * 0.12 / (0.3 + d.r);
-    const rr = d.r * R * 9 + R;
+    const rr = d.r * Math.min(R, 60) * 9 + R;
     cp[i * 3] = T.x + Math.cos(d.a) * rr; cp[i * 3 + 1] = H + d.y; cp[i * 3 + 2] = T.z + Math.sin(d.a) * rr;
   }
   cloud.geometry.attributes.position.needsUpdate = true;
@@ -1693,8 +1770,8 @@ function updateTornadoVisuals(dt, time) {
     dp[i * 3] = T.x + Math.cos(d.a) * d.r * R; dp[i * 3 + 1] = d.y; dp[i * 3 + 2] = T.z + Math.sin(d.a) * d.r * R;
   }
   dust.geometry.attributes.position.needsUpdate = true;
-  dust.material.opacity = 0.8 * inten;
-  dust.material.size = 8 + T.ef * 2;
+  dust.material.opacity = 0.8 * inten * lerp(0.45, 1, T.ground);
+  dust.material.size = (8 + T.ef * 2) * clamp(R / 40, 0.7, 2);
 }
 
 // ---------------------------------------------------------------------------
@@ -1945,12 +2022,28 @@ function startBuilding() {
 function touchdown() {
   const p = G.plan;
   Object.assign(T, { active: true, x: p.gx, z: p.gz, ef: p.ef, inten: 0, age: 0, hitPlayer: false });
-  T.R = 14 + T.ef * 7;
+  T.R0 = 14 + T.ef * 7;
   T.life = rnd(85, 125) + T.ef * 8;
   T.yaw = p.dir; T.yawVel = 0; T.speed = p.speed;
+  // the tornado's type; drillbits often start out as a multi-vortex, stovepipes grow into cones or wedges
+  const type = pickType(T.ef);
+  const start = type === 'drillbit' && Math.random() < 0.6 ? 'multivortex' : type;
+  Object.assign(T, { type: start, prevType: start, type0: type, blend: 1, roped: false, subs: [], subA: rnd(0, TAU), subK: 0 });
+  T.morphTo = start !== type ? type : (TORNADO_TYPES[type].next ? TORNADO_TYPES[type].next(T.ef) : null);
+  T.morphAt = T.life * rnd(0.3, 0.45);
+  T.ground = TORNADO_TYPES[start].floats ? 0 : 1; T.touchAt = rnd(15, 30);
+  T.R = T.R0 * TORNADO_TYPES[start].wind;
   G.phase = 'active'; G.cell = null;
   AudioFX.siren();
-  banner(`Tornado warning! An EF${T.ef} touched down, moving ${compass(T.yaw)}`, 'warn', 3);
+  const name = TORNADO_TYPES[start].name.toLowerCase();
+  banner(start === 'floating'
+    ? `Tornado warning! An EF${T.ef} floating funnel is dangling from the cloud, moving ${compass(T.yaw)}`
+    : `Tornado warning! An EF${T.ef} ${name} tornado touched down, moving ${compass(T.yaw)}`, 'warn', 3);
+}
+function setShape(type, msg) {
+  if (type === T.type) return;
+  T.prevType = T.type; T.type = type; T.blend = 0;
+  if (msg) toast(msg, 2600);
 }
 // pay for the data collected; probes the tornado missed are picked up again
 function settle() {
@@ -1970,7 +2063,7 @@ function endStorm() {
   G.phase = 'done';
   const s = G.stats;
   const stars = 1 + (s.closest < R * 3 && (s.rec > 3 || s.scan > 3) ? 1 : 0) + (s.intercept ? 1 : 0);
-  $('summaryTitle').textContent = `The EF${ef} tornado roped out`;
+  $('summaryTitle').textContent = `The EF${ef} ${TORNADO_TYPES[T.type0].name.toLowerCase()} tornado roped out`;
   $('summaryStars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
   $('summaryList').innerHTML =
     `<dt>Data collected</dt><dd>${fmt(r.data)}</dd>` +
@@ -1988,16 +2081,20 @@ function endStorm() {
 // Simulation
 // ---------------------------------------------------------------------------
 function windAt(x, z) {
-  if (!T.active) return { ms: 0, x: 0, z: 0, f: 0, xr: Infinity };
+  if (!T.active) return { ms: 0, x: 0, z: 0, f: 0, xr: Infinity, hot: 0 };
   const dx = x - T.x, dz = z - T.z;
   const r = Math.max(Math.hypot(dx, dz), 0.5);
   const xr = r / T.R;
   const f = xr < 1 ? xr : Math.pow(1 / xr, 0.9);
-  const ms = EF_MS[T.ef] * T.inten * f;
+  let ms = EF_MS[T.ef] * T.inten * f * lerp(0.5, 1, T.ground);
+  // suction vortices: small spots of much stronger wind orbiting inside the tornado
+  let hot = 0;
+  if (T.subK > 0.01) for (const s of T.subs) { const ds = Math.hypot(x - s.x, z - s.z), sr = T.R * 0.35; if (ds < sr) hot = Math.max(hot, (1 - ds / sr) * T.subK); }
+  ms += EF_MS[T.ef] * 0.35 * hot * T.inten;
   const ox = dx / r, oz = dz / r;
   const tx = -oz, tz = ox;
   const inflow = xr < 1 ? 0.25 : 0.6;
-  return { ms, x: tx - ox * inflow, z: tz - oz * inflow, f, xr };
+  return { ms, x: tx - ox * inflow, z: tz - oz * inflow, f, xr, hot };
 }
 
 function updateHydraulics(dt) {
@@ -2070,6 +2167,7 @@ function updateCar(dt) {
     c.armor -= dmg * dt;
     if (Math.random() < dt * 2) AudioFX.burst('bandpass', 1400, 0.2, 0.25);
   }
+  if (w.hot > 0) c.armor -= (6 + T.ef * 3) * w.hot * T.inten * (locked ? 0.4 : 1) * VH.dmg * dt;
   if (c.armor <= 0) repairTruck();
   return w;
 }
@@ -2092,7 +2190,29 @@ function updateTornado(dt) {
   T.age += dt;
   T.inten = clamp(Math.min(T.age / 8, 1, (T.life - T.age) / 10), 0, 1);
   if (T.age > T.life) { endStorm(); return; }
-  T.yawVel = clamp(T.yawVel + rnd(-0.25, 0.25) * dt, -0.18, 0.18);
+  T.blend = Math.min(1, T.blend + dt / 8);
+  if (T.morphTo && T.age > T.morphAt) {
+    const to = T.morphTo; T.morphTo = null;
+    setShape(to, `The tornado is becoming a ${TORNADO_TYPES[to].name.toLowerCase()}!`);
+  }
+  if (!T.roped && T.age > T.life * 0.85) { T.roped = true; setShape('rope', 'The tornado is roping out'); }
+  const A = TORNADO_TYPES[T.prevType], B = TORNADO_TYPES[T.type], b = smooth(T.blend);
+  T.R = T.R0 * lerp(A.wind, B.wind, b);
+  if (A.floats || B.floats) {
+    const was = T.ground; T.ground = clamp((T.age - T.touchAt) / 6, 0, 1);
+    if (was === 0 && T.ground > 0) banner('The floating funnel is touching down!', 'warn', 2.4);
+  } else T.ground = 1;
+  T.subK = lerp(A.subs ? 1 : 0, B.subs ? 1 : 0, b);
+  const ns = Math.max(A.subs || 0, B.subs || 0);
+  T.subA += dt * (1.1 + T.ef * 0.15);
+  T.subs.length = ns;
+  for (let k = 0; k < ns; k++) {
+    const a = T.subA + k * TAU / ns;
+    T.subs[k] = { x: T.x + Math.cos(a) * T.R * 0.7, z: T.z + Math.sin(a) * T.R * 0.7 };
+  }
+  // multi-vortex tornadoes wander the most
+  const wander = lerp(A.wander, B.wander, b);
+  T.yawVel = clamp(T.yawVel + rnd(-0.25, 0.25) * wander * dt, -0.18 * wander, 0.18 * wander);
   T.yaw += T.yawVel * dt;
   // gently steer back toward the middle near the edges
   if (Math.abs(T.x) > WORLD - 120 || Math.abs(T.z) > WORLD - 120) {
@@ -2139,7 +2259,7 @@ function updateProbes(dt, time) {
       const d = Math.hypot(p.m.position.x - T.x, p.m.position.z - T.z);
       if (d < T.R) {
         p.hit = true; G.stats.probeHits++;
-        const pts = 300 * (T.ef + 1); addScore(pts);
+        const pts = Math.round(300 * (T.ef + 1) * TORNADO_TYPES[T.type].probe); addScore(pts);
         banner(`Your probe got data from inside the core! +${fmt(pts)}`, 'good', 2.4); AudioFX.chime();
         p.fly = { a: Math.atan2(p.m.position.z - T.z, p.m.position.x - T.x), t: 3 };
       }
@@ -2178,7 +2298,7 @@ function updateScoring(dt, w) {
   G.stats.closest = Math.min(G.stats.closest, d);
   if (G.rec) G.stats.rec += dt;
   if (tick && G.rec) {
-    const m = (T.ef + 1) * (career.lens ? 1.5 : 1);
+    const m = (T.ef + 1) * (career.lens ? 1.5 : 1) * TORNADO_TYPES[T.type].film;
     if (d < T.R) addScore(30 * m); else if (d < T.R * 3) addScore(12 * m); else if (d < T.R * 8) addScore(4 * m);
   }
   if (!G.stats.intercept && G.hyd.state === HYD.LOCKED && d < T.R) {
@@ -2412,7 +2532,7 @@ function updateHUD(dt, w, time) {
   const p = G.plan;
   if (G.phase === 'calm') { el.status.className = 'panel calm'; el.status.textContent = `Forecast: storms expected in the orange risk area. Supercell in ${Math.ceil(G.phaseT)} s`; }
   else if (G.phase === 'build') { el.status.className = 'panel build'; el.status.textContent = `Supercell moving ${compass(p.dir)} at ${Math.round(p.speed * 2.237)} mph. Touchdown in ${Math.ceil(G.phaseT)} s`; }
-  else if (T.active) { el.status.className = 'panel alert'; el.status.textContent = `TORNADO WARNING  EF${T.ef}  winds up to ${Math.round(EF_MS[T.ef] * 2.237)} mph`; }
+  else if (T.active) { el.status.className = 'panel alert'; el.status.textContent = `TORNADO WARNING  EF${T.ef} ${TORNADO_TYPES[T.type].name.toUpperCase()}  winds up to ${Math.round(EF_MS[T.ef] * 2.237)} mph`; }
   else { el.status.className = 'panel calm'; el.status.textContent = G.phase === 'done' ? 'The storm is over. Head back to base.' : 'At base. Plan your next chase.'; }
   let target = null, label = '';
   if (T.active) target = T;
