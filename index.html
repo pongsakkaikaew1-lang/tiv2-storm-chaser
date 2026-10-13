@@ -909,15 +909,16 @@ function buildJoker() {
 }
 
 // ---------------------------------------------------------------------------
-// Joker 2: tall black body on big flared skirts, a shark mouth on the front quarters,
-// purple hydraulic rams, a roof spotlight camera, a long whip antenna and a weather mast
+// Joker 2: long black body on big flared skirts with a wide plow nose that carries
+// a shark mouth, a small cabin with a row of green and amber roof lights, dome cameras,
+// an anemometer mast, a whip antenna, purple hydraulic rams and orange under-glow
 // ---------------------------------------------------------------------------
 function sharkTexture() {
   const c = document.createElement('canvas'); c.width = 512; c.height = 224;
   const g = c.getContext('2d');
-  // a wide grin: both corners up, the jaw curving down in the middle
-  const top = (t) => [lerp(24, 488, t), 40 + Math.sin(t * Math.PI) * 40];
-  const bot = (t) => [lerp(24, 488, t), 40 + Math.sin(t * Math.PI) * 170];
+  // a wide grin: both corners up at the top of the plow, the jaw curving down in the middle
+  const top = (t) => [lerp(52, 460, t), 34 + Math.sin(t * Math.PI) * 44];
+  const bot = (t) => [lerp(52, 460, t), 34 + Math.sin(t * Math.PI) * 176];
   g.beginPath(); g.moveTo(...top(0));
   for (let i = 1; i <= 32; i++) g.lineTo(...top(i / 32));
   for (let i = 32; i >= 0; i--) g.lineTo(...bot(i / 32));
@@ -929,17 +930,18 @@ function sharkTexture() {
   const teeth = (edge, dir, n) => {
     for (let i = 1; i < n; i++) {
       const [x0, y0] = edge((i - 0.5) / n), [x1, y1] = edge((i + 0.5) / n), [xm, ym] = edge(i / n);
-      const len = 14 + Math.sin(i / n * Math.PI) * 22;
+      const len = 14 + Math.sin(i / n * Math.PI) * 24;
       g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.lineTo(xm, ym + dir * len); g.closePath(); g.fill();
     }
   };
-  teeth(top, 1, 16); teeth(bot, -1, 16);
+  teeth(top, 1, 18); teeth(bot, -1, 18);
   return new THREE.CanvasTexture(c);
 }
 const JOKER2 = {
   body: lam(0x202326), panel: lam(0x2b2f33), skirt: lam(0x18191b), purple: lam(0x6c2fb4), dark: lam(0x0e0f10),
-  spot: new THREE.MeshBasicMaterial({ color: 0xf4f1e6 }),
-  shark: new THREE.MeshBasicMaterial({ map: sharkTexture(), transparent: true, depthWrite: false })
+  dome: lam(0x9aa1a8), green: new THREE.MeshBasicMaterial({ color: 0x8dff6a }),
+  shark: new THREE.MeshBasicMaterial({ map: sharkTexture(), transparent: true, depthWrite: false }),
+  glow: new THREE.MeshBasicMaterial({ map: SOFT, color: 0xff9a3a, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending })
 };
 
 function buildJoker2() {
@@ -948,89 +950,110 @@ function buildJoker2() {
   root.add(body);
   const V = (x, y, z) => new THREE.Vector3(x, y, z);
   const box = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); body.add(m); return m; };
+  const cyl = (rt, rb, h, mat, x, y, z, seg) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 8), mat); m.position.set(x, y, z); body.add(m); return m; };
   const hull = (b, t, mat) => body.add(new THREE.Mesh(hullGeometry(b, t), mat));
   const xAt = (b, t, y) => lerp(b.w, t.w, (y - b.y) / (t.y - b.y));
+  const sidePlates = (b, t, zc, len, yb, yt, mat) => [-1, 1].forEach((s) => {
+    const xb = s * xAt(b, t, yb), xt = s * xAt(b, t, yt);
+    const pts = s > 0
+      ? [V(xb, yb, zc + len / 2), V(xb, yb, zc - len / 2), V(xt, yt, zc - len / 2), V(xt, yt, zc + len / 2)]
+      : [V(xb, yb, zc - len / 2), V(xb, yb, zc + len / 2), V(xt, yt, zc + len / 2), V(xt, yt, zc - len / 2)];
+    body.add(plateOn(pts, 0.03, mat));
+  });
 
-  // chassis inside the skirts, rounded upper hull and the cabin
-  box(2.0, 0.5, 5.8, JOKER2.skirt, 0, 0.8, 0);
-  box(2.1, 0.6, 5.9, JOKER2.panel, 0, 1.3, -0.05);
-  const UB = { w: 1.08, y: 1.6, z0: -3.0, z1: 2.9 }, UT = { w: 0.92, y: 2.15, z0: -2.8, z1: 2.2 };
+  // chassis inside the skirts, the plow nose, upper hull with the sloped hood, cabin and rear roof
+  box(2.1, 0.9, 6.4, JOKER2.panel, 0, 1.0, -0.5);
+  const PB = { w: 1.55, y: 0.22, z0: 2.3, z1: 4.05 }, PT = { w: 1.2, y: 1.3, z0: 2.3, z1: 3.6 };
+  hull(PB, PT, JOKER2.body);
+  const UB = { w: 1.08, y: 1.35, z0: -3.6, z1: 3.5 }, UT = { w: 0.95, y: 2.0, z0: -3.4, z1: 1.9 };
   hull(UB, UT, JOKER2.body);
-  const CB = { w: 0.92, y: 2.15, z0: -2.5, z1: 1.7 }, CT = { w: 0.72, y: 2.65, z0: -2.2, z1: 1.1 };
+  const CB = { w: 0.95, y: 2.0, z0: -0.3, z1: 1.9 }, CT = { w: 0.78, y: 2.5, z0: -0.3, z1: 1.2 };
   hull(CB, CT, JOKER2.body);
+  const RB = { w: 0.95, y: 2.0, z0: -3.4, z1: -0.3 }, RT = { w: 0.8, y: 2.55, z0: -3.0, z1: -0.3 };
+  hull(RB, RT, JOKER2.body);
 
-  // windshield on the cabin's front slope and a row of small side windows
+  // shark mouth across the whole front of the plow
+  body.add(plateOn([V(-1.5, 0.3, 4.02), V(1.5, 0.3, 4.02), V(1.17, 1.25, 3.62), V(-1.17, 1.25, 3.62)], 0.02, JOKER2.shark));
+
+  // windshield, cabin side windows, a small window on each side of the rear body
   const along = (a, b2, t) => V(lerp(a.x, b2.x, t), lerp(a.y, b2.y, t), lerp(a.z, b2.z, t));
   const fb = V(0, CB.y, CB.z1), ft = V(0, CT.y, CT.z1);
   [-1, 1].forEach((s) => {
     const lo = along(fb, ft, 0.15), hi = along(fb, ft, 0.85);
-    const wLo = lerp(CB.w, CT.w, 0.15) - 0.1, wHi = lerp(CB.w, CT.w, 0.85) - 0.08;
+    const wLo = lerp(CB.w, CT.w, 0.15) - 0.08, wHi = lerp(CB.w, CT.w, 0.85) - 0.06;
     const pts = s > 0
       ? [V(0.04, lo.y, lo.z), V(wLo, lo.y, lo.z), V(wHi, hi.y, hi.z), V(0.04, hi.y, hi.z)]
       : [V(-wLo, lo.y, lo.z), V(-0.04, lo.y, lo.z), V(-0.04, hi.y, hi.z), V(-wHi, hi.y, hi.z)];
     body.add(plateOn(pts, 0.03, TRUCK.glass));
-    [0.55, -0.2, -0.95, -1.7].forEach((zc) => {
-      const len = 0.5, yb = 2.27, yt = 2.52;
-      const xb = s * xAt(CB, CT, yb), xt = s * xAt(CB, CT, yt);
-      const q = s > 0
-        ? [V(xb, yb, zc + len / 2), V(xb, yb, zc - len / 2), V(xt, yt, zc - len / 2), V(xt, yt, zc + len / 2)]
-        : [V(xb, yb, zc - len / 2), V(xb, yb, zc + len / 2), V(xt, yt, zc + len / 2), V(xt, yt, zc - len / 2)];
-      body.add(plateOn(q, 0.03, TRUCK.glass));
-    });
   });
+  sidePlates(CB, CT, 0.95, 0.5, 2.1, 2.4, TRUCK.glass);
+  sidePlates(CB, CT, 0.25, 0.7, 2.1, 2.42, TRUCK.glass);
+  sidePlates(RB, RT, -0.85, 0.5, 2.1, 2.42, TRUCK.glass);
 
-  // lights: headlights and ambers on the nose, red bar at the back, small lamps on the roof edge
+  // lights: green and amber row on the cabin roof, amber mirror lights, red tail lights
+  [JOKER2.green, TRUCK.amber, TRUCK.amber, TRUCK.amber, JOKER2.green].forEach((m, i) => box(0.1, 0.07, 0.08, m, (i - 2) * 0.2, CT.y + 0.04, CT.z1 - 0.08));
   [-1, 1].forEach((s) => {
-    box(0.3, 0.12, 0.05, TRUCK.lamp, s * 0.62, 1.75, 2.86);
-    box(0.14, 0.1, 0.05, TRUCK.amber, s * 0.92, 1.75, 2.84);
-    box(0.5, 0.1, 0.05, TRUCK.tail, s * 0.55, 1.95, -2.93);
-    [0.25, 0.5].forEach((x) => box(0.12, 0.06, 0.08, TRUCK.lamp, s * x, CT.y + 0.03, CT.z1 - 0.1));
+    box(0.3, 0.03, 0.03, JOKER2.dark, s * 1.1, 2.05, 1.75);
+    box(0.06, 0.16, 0.12, JOKER2.dark, s * 1.26, 2.05, 1.75);
+    box(0.03, 0.1, 0.1, TRUCK.amber, s * 1.29, 2.05, 1.77);
+    box(0.4, 0.1, 0.05, TRUCK.tail, s * 0.5, 1.8, -3.62);
   });
 
-  // roof spotlight camera that turns toward the tornado
-  const turret = new THREE.Group(); turret.position.set(0, CT.y, 0.55); body.add(turret);
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.14, 12), JOKER2.dark); base.position.y = 0.07; turret.add(base);
-  const can = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.3, 14), JOKER2.panel); can.rotation.x = Math.PI / 2; can.position.y = 0.32; turret.add(can);
-  const glow = new THREE.Mesh(new THREE.CircleGeometry(0.14, 14), JOKER2.spot); glow.position.set(0, 0.32, 0.152); turret.add(glow);
+  // dome cameras on a small platform that turns toward the tornado
+  const turret = new THREE.Group(); turret.position.set(0, RT.y, -0.75); body.add(turret);
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 0.4), JOKER2.dark); deck.position.y = 0.04; turret.add(deck);
+  [-1, 1].forEach((s) => {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.14, 6), JOKER2.dark); post.position.set(s * 0.22, 0.15, 0); turret.add(post);
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), JOKER2.dome); ball.position.set(s * 0.22, 0.32, 0); turret.add(ball);
+  });
+  const cam = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 0.26), JOKER2.dark); cam.position.set(0, 0.16, 0.04); turret.add(cam);
+  const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.06, 10), TRUCK.glass); lens.rotation.x = Math.PI / 2; lens.position.set(0, 0.16, 0.19); turret.add(lens);
 
-  // long whip antenna with a cross bar near the front of the roof
-  const ax = -0.45, az = 0.95;
-  const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.025, 2.6, 5), JOKER2.dark); ant.position.set(ax, CT.y + 1.3, az); body.add(ant);
-  box(0.6, 0.02, 0.02, JOKER2.dark, ax, CT.y + 1.7, az);
-
-  // weather mast at the back of the roof: wind vane on one end of the bar, anemometer on the other
-  const mx = 0.2, mz = -1.6, top = CT.y + 1.25;
-  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.25, 6), JOKER2.dark); mast.position.set(mx, CT.y + 0.62, mz); body.add(mast);
-  box(0.03, 0.03, 0.8, JOKER2.dark, mx, top, mz);
-  box(0.03, 0.16, 0.18, JOKER2.dark, mx, top, mz - 0.45);
-  box(0.12, 0.1, 0.12, TRUCK.chrome, mx, CT.y + 0.85, mz);
-  const anemo = new THREE.Group(); anemo.position.set(mx, top + 0.08, mz + 0.4); body.add(anemo);
+  // anemometer mast mid-roof: cups on the front of the bar, a wind vane at the back
+  const mx = 0.15, mz = -1.6, top = RT.y + 0.95;
+  cyl(0.035, 0.035, 0.95, JOKER2.dark, mx, RT.y + 0.47, mz, 6);
+  box(0.03, 0.03, 0.7, JOKER2.dark, mx, top, mz);
+  box(0.03, 0.16, 0.2, JOKER2.dark, mx, top + 0.02, mz - 0.4);
+  const anemo = new THREE.Group(); anemo.position.set(mx, top + 0.08, mz + 0.35); body.add(anemo);
+  cyl(0.012, 0.012, 0.1, JOKER2.dark, mx, top + 0.04, mz + 0.35, 4);
   for (let i = 0; i < 3; i++) {
     const holder = new THREE.Group(); holder.rotation.y = i * TAU / 3;
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.02, 0.02), TRUCK.chrome); arm.position.x = 0.11; holder.add(arm);
-    const cup = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), TRUCK.chrome); cup.position.x = 0.22; holder.add(cup);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 0.02), TRUCK.chrome); arm.position.x = 0.1; holder.add(arm);
+    const cup = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), TRUCK.chrome); cup.position.x = 0.2; holder.add(cup);
     anemo.add(holder);
   }
+  // long whip antenna toward the back
+  cyl(0.012, 0.022, 2.3, JOKER2.dark, -0.5, RT.y + 1.1, -2.3, 5);
 
-  // big flared skirts in an octagon; the side ones carry the shark mouth near the front
+  // big flared skirts down the sides and round the back, with ribs and amber lights along the bottom
   const skirts = [];
-  const addSkirt = (w, x, z, yaw) => {
+  const addSkirt = (w, x, z, yaw, ribs) => {
     const h = 1.4;
     const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = yaw;
     const lean = new THREE.Group(); lean.rotation.x = -0.28; g.add(lean); // bottom flares outward
     const plate = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.08), JOKER2.skirt); plate.position.y = h / 2; lean.add(plate);
     const rim = new THREE.Mesh(new THREE.BoxGeometry(w, 0.05, 0.1), JOKER2.panel); rim.position.y = h - 0.03; lean.add(rim);
-    body.add(g); skirts.push({ g, up: 0.3, down: -0.05 });
+    if (ribs) for (let x0 = -w / 2 + 0.6; x0 < w / 2 - 0.3; x0 += 1.15) {
+      const rib = new THREE.Mesh(new THREE.BoxGeometry(0.06, h - 0.1, 0.05), JOKER2.panel); rib.position.set(x0, h / 2, 0.05); rib.rotation.z = 0.12; lean.add(rib);
+    }
+    for (let x0 = -w / 2 + 0.3; x0 < w / 2 - 0.1; x0 += 0.75) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.05, 0.03), TRUCK.amber); m.position.set(x0, 0.07, 0.05); lean.add(m);
+    }
+    body.add(g); skirts.push({ g, up: 0.2, down: -0.05 });
     return lean;
   };
-  addSkirt(1.75, 0, 3.3, 0);
-  addSkirt(1.75, 0, -3.4, Math.PI);
+  addSkirt(1.75, 0, -4.0, Math.PI, false);
   [-1, 1].forEach((s) => {
-    const side = addSkirt(4.62, s * 1.5, -0.05, s * Math.PI / 2);
-    const mouth = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.88), JOKER2.shark);
-    mouth.position.set(-s * 1.15, 0.62, 0.042); side.add(mouth); // local -x is forward on the right side, +x on the left
-    addSkirt(1.25, s * 1.18, 2.78, s * Math.atan2(1.05, 0.65));
-    addSkirt(1.25, s * 1.18, -2.88, s * Math.atan2(1.05, -0.65));
+    addSkirt(5.7, s * 1.5, -0.45, s * Math.PI / 2, true);
+    addSkirt(0.96, s * 1.175, -3.65, s * Math.atan2(0.7, -0.65), false);
+  });
+
+  // orange glow on the ground under the skirt lights
+  const glowGeo = new THREE.PlaneGeometry(1.1, 0.7);
+  [-1, 1].forEach((s) => {
+    for (let z = -3.0; z <= 2.2; z += 0.75) {
+      const m = new THREE.Mesh(glowGeo, JOKER2.glow); m.rotation.x = -Math.PI / 2; m.position.set(s * 1.75, 0.03, z); root.add(m);
+    }
   });
 
   // purple hydraulic rams lying along the rear half of each side skirt
@@ -1039,17 +1062,17 @@ function buildJoker2() {
   const addRam = (top2, bottom) => {
     const dir = new THREE.Vector3().subVectors(bottom, top2); const len = dir.length(); dir.normalize();
     const q = new THREE.Quaternion().setFromUnitVectors(UPV, dir);
-    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, len, 10), JOKER2.purple); cyl.quaternion.copy(q); cyl.position.copy(top2).add(bottom).multiplyScalar(0.5); body.add(cyl);
+    const ram = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, len, 10), JOKER2.purple); ram.quaternion.copy(q); ram.position.copy(top2).add(bottom).multiplyScalar(0.5); body.add(ram);
     [0.1, 0.9].forEach((k) => { const band = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.08, 10), JOKER2.dark); band.quaternion.copy(q); band.position.lerpVectors(top2, bottom, k); body.add(band); });
     const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1, 8), TRUCK.chrome); rod.quaternion.copy(q); body.add(rod);
     const maxL = Math.max(0.2, (bottom.y - (-0.35 + 0.22)) / -dir.y);
     spikes.push({ rod, p0: bottom.clone(), dir, minL: 0.05, maxL });
   };
-  [-1, 1].forEach((s) => [-1.0, -1.9].forEach((z) => addRam(V(s * 1.16, 1.72, z), V(s * 1.64, 0.48, z))));
+  [-1, 1].forEach((s) => [-1.5, -2.5].forEach((z) => addRam(V(s * 1.13, 1.62, z), V(s * 1.62, 0.42, z))));
 
-  // eight wheels on four axles, peeking out under the skirts
+  // eight wheels on four axles behind the skirts
   const wheels = [];
-  [2.1, 0.75, -0.85, -2.2].forEach((z, i) => [-1, 1].forEach((s) => {
+  [2.0, 0.65, -0.95, -2.3].forEach((z, i) => [-1, 1].forEach((s) => {
     const r = 0.46;
     const steer = new THREE.Group(); steer.position.set(s * 1.05, r, z); root.add(steer);
     const spin = new THREE.Group(); steer.add(spin);
