@@ -34,12 +34,15 @@ multi-vortex, and every tornado ropes out before it dies.
 
 ## Vehicles
 
-| Vehicle | Top speed | Notes |
-|---|---|---|
-| TIV2 | 58 mph | Heavy armor |
-| Joker 1 | 69 mph | Fastest, lighter armor |
-| Joker 2 | 51 mph | Slowest, heaviest armor |
-| Radar Truck | 60 mph | The only vehicle that can scan storms; light armor |
+| Vehicle | Top speed | Holds when locked | Notes |
+|---|---|---|---|
+| TIV2 | 58 mph | 235 mph | Strongest when deployed, slow to deploy (Twisted wiki) |
+| Joker 1 | 69 mph | 185 mph | Fastest, deploys quickly, lighter armor |
+| Joker 2 | 51 mph | 210 mph | Slowest, heaviest armor |
+| Radar Truck | 60 mph | 140 mph | The only vehicle that can scan storms; light armor |
+
+If the wind goes past what a locked-down vehicle holds, it is torn loose and damaged. Armor plating
+upgrades add 10 mph per level.
 
 Every vehicle locks down with hydraulics that drive spikes or jacks into the ground. In the
 garage each vehicle can be painted and upgraded (engine, armor plating, fuel tank, hydraulics).

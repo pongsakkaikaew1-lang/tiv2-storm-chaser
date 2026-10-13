@@ -793,13 +793,27 @@ function strike(cx, cz) {
 // The TIV2 truck
 // ---------------------------------------------------------------------------
 const TRUCK = {
-  body: lam(0x737880), panel: lam(0x5f646b), skirt: lam(0x1f2023), trim: lam(0x9ba3ab),
+  body: lam(0x3d4248), panel: lam(0x33373c), skirt: lam(0x2b2e32), trim: lam(0x8f969d),
   glass: lam(0x1a2735, { emissive: 0x060d14 }), red: lam(0xb3261e), yellow: lam(0xf2c230), chrome: lam(0xc9ced4),
   grille: lam(0x101214), plate: new THREE.MeshBasicMaterial({ color: 0xeeeeea }),
   dome: new THREE.MeshLambertMaterial({ color: 0x2c3a46, transparent: true, opacity: 0.72 }),
   tire: lam(0x1a1a1a), hub: lam(0x6f747a), lamp: new THREE.MeshBasicMaterial({ color: 0xfff6dc }), tail: new THREE.MeshBasicMaterial({ color: 0xff3b2f }),
   amber: new THREE.MeshBasicMaterial({ color: 0xffa23a }), lens: lam(0x0b0f14), hazard: new THREE.MeshBasicMaterial({ map: HAZARD })
 };
+// TIV-2 textures: steel mesh grilles, the NHRA name plate, striped spike sleeves, the blue camera lens
+const TIV2_MESH = lam(0xffffff, { map: canvasTex(128, 64, (g, w, h) => {
+  g.fillStyle = '#16181b'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = '#5d6268'; g.lineWidth = 1;
+  for (let x = -h; x < w; x += 5) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + h, h); g.moveTo(x + h, 0); g.lineTo(x, h); g.stroke(); }
+  g.strokeStyle = '#2a2d31'; g.lineWidth = 4; g.strokeRect(2, 2, w - 4, h - 4);
+}) });
+const TIV2_PLATE = new THREE.MeshBasicMaterial({ transparent: true, map: canvasTex(128, 32, (g, w, h) => {
+  g.fillStyle = '#c9ced4'; g.font = '600 24px Fredoka, "Trebuchet MS", sans-serif'; g.textAlign = 'center'; g.fillText('NHRA', w / 2, 25);
+}) });
+const TIV2_STRIPES = lam(0xffffff, { map: canvasTex(16, 64, (g, w, h) => {
+  for (let y = 0; y < h; y += 16) { g.fillStyle = '#c8261e'; g.fillRect(0, y, w, 8); g.fillStyle = '#f2f2f2'; g.fillRect(0, y + 8, w, 8); }
+}, 1, 1) });
+const TIV2_LENS = new THREE.MeshBasicMaterial({ color: 0x3a7bff });
 
 // a hull made from a bottom rectangle (belt line) and a narrower top rectangle (roof):
 // gives the raked sides plus the long sloped nose and tail
@@ -835,129 +849,153 @@ function plateOn(points, thick, mat) {
   return m;
 }
 
-// Grey armored TIV 2 in the style of the classic GMod build: low and wide, a flat grilled
-// front, a faceted cabin, a glass camera cage on the roof, black flared skirts all round
-// and diagonal red hydraulic rams with yellow tips.
+// TIV-2 as it appears in Twisted (2024 look): a dark charcoal armored truck with a tall grilled
+// front box, flared front corner flaps, long side flaps edged with hazard tape, red-and-white
+// striped hydraulic spikes, a raked windshield, a faceted camera cage with a roof hatch, a weather
+// mast at the back and six wheels (single front axle, tandem rear).
 function buildTruck() {
   const root = new THREE.Group();
   const body = new THREE.Group(); // everything the airbags lower
   root.add(body);
   const V = (x, y, z) => new THREE.Vector3(x, y, z);
   const box = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); body.add(m); return m; };
+  const cyl = (rt, rb, h, mat, x, y, z, seg) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 10), mat); m.position.set(x, y, z); body.add(m); return m; };
+  const hull = (b, t, mat) => body.add(new THREE.Mesh(hullGeometry(b, t), mat));
+  const xAt = (b, t, y) => lerp(b.w, t.w, (y - b.y) / (t.y - b.y));
+  const sidePlates = (b, t, zc, len, yb, yt, mat) => [-1, 1].forEach((s) => {
+    const xb = s * xAt(b, t, yb), xt = s * xAt(b, t, yt);
+    const pts = s > 0
+      ? [V(xb, yb, zc + len / 2), V(xb, yb, zc - len / 2), V(xt, yt, zc - len / 2), V(xt, yt, zc + len / 2)]
+      : [V(xb, yb, zc - len / 2), V(xb, yb, zc + len / 2), V(xt, yt, zc + len / 2), V(xt, yt, zc - len / 2)];
+    body.add(plateOn(pts, 0.03, mat));
+  });
+  const mesh = TIV2_MESH, plate = TIV2_PLATE;
 
-  // chassis, armored lower body and the chamfered hood deck
-  box(2.1, 0.45, 6.0, TRUCK.skirt, 0, 0.72, 0);
-  box(2.72, 0.7, 6.0, TRUCK.panel, 0, 1.2, -0.05);
-  body.add(new THREE.Mesh(hullGeometry({ w: 1.36, y: 1.55, z0: -3.05, z1: 2.95 }, { w: 1.2, y: 1.92, z0: -2.7, z1: 2.6 }), TRUCK.body));
-  // faceted cabin with a hipped roof
-  const CB = { w: 1.18, y: 1.9, z0: -2.35, z1: 1.55 }, CT = { w: 0.72, y: 2.72, z0: -1.65, z1: 0.75 };
-  body.add(new THREE.Mesh(hullGeometry(CB, CT), TRUCK.body));
+  // chassis, lower body, cab and the rear box that slopes down at the tail
+  box(2.0, 0.4, 6.8, TRUCK.skirt, 0, 0.75, -0.4);
+  // lower body hides behind the flaps; the flaps hang from a ledge under the doors
+  const LB = { w: 1.0, y: 0.6, z0: -3.7, z1: 2.3 }, LT = { w: 1.05, y: 1.5, z0: -3.6, z1: 2.3 };
+  hull(LB, LT, TRUCK.skirt);
+  const UB = { w: 1.27, y: 1.5, z0: -3.6, z1: 2.3 }, UT = { w: 1.2, y: 1.95, z0: -3.45, z1: 2.3 };
+  hull(UB, UT, TRUCK.body);
+  const CB = { w: 1.2, y: 1.95, z0: -0.7, z1: 2.25 }, CT = { w: 0.98, y: 2.78, z0: -0.7, z1: 1.15 };
+  hull(CB, CT, TRUCK.body);
+  const RB = { w: 1.2, y: 1.95, z0: -3.45, z1: -0.7 }, RT = { w: 0.96, y: 2.6, z0: -3.0, z1: -0.7 };
+  hull(RB, RT, TRUCK.body);
 
-  // flat front face with a dark slatted grille and lights
-  box(2.6, 0.62, 0.08, TRUCK.panel, 0, 1.58, 2.98);
-  box(1.0, 0.5, 0.05, TRUCK.grille, 0, 1.58, 3.03);
-  for (let i = -4; i <= 4; i++) box(0.04, 0.46, 0.03, TRUCK.body, i * 0.105, 1.58, 3.06);
-  [-0.95, 0.95].forEach((x) => { box(0.32, 0.12, 0.04, TRUCK.lamp, x, 1.72, 3.04); box(0.18, 0.1, 0.04, TRUCK.amber, x, 1.5, 3.04); });
-  [-1.0, 1.0].forEach((x) => box(0.34, 0.14, 0.05, TRUCK.tail, x, 1.42, -3.08));
-  [-0.4, 0.4].forEach((x) => box(0.26, 0.08, 0.05, TRUCK.lamp, x, 2.76, CT.z1 - 0.05));
-
-  // windows: split windshield on the cabin's front slope, two panes on each raked side
+  // tall grilled front box: narrower at the top, face raked back a little
+  const FB = { w: 1.15, y: 0.42, z0: 2.25, z1: 3.75 }, FT = { w: 0.9, y: 1.98, z0: 2.25, z1: 3.55 };
+  hull(FB, FT, TRUCK.panel);
   const along = (a, b2, t) => V(lerp(a.x, b2.x, t), lerp(a.y, b2.y, t), lerp(a.z, b2.z, t));
+  const faceAt = (t, hw) => { const p = along(V(0, FB.y, FB.z1), V(0, FT.y, FT.z1), t); return [V(-hw, p.y, p.z), V(hw, p.y, p.z)]; };
+  const facePlate = (t0, t1, hw, mat, th) => {
+    const [bl, br] = faceAt(t0, hw), [tl, tr] = faceAt(t1, hw);
+    body.add(plateOn([bl, br, tr, tl], th || 0.03, mat));
+  };
+  facePlate(0.52, 0.8, 0.42, mesh);         // upper grille
+  facePlate(0.3, 0.48, 0.38, mesh);         // lower grille
+  facePlate(0.86, 0.95, 0.3, plate, 0.02);  // name plate
+  facePlate(0.04, 0.11, 0.22, TRUCK.plate, 0.02); // licence plate
+  [-1, 1].forEach((s) => {
+    const fog = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.08, 14), TRUCK.lamp); fog.rotation.x = Math.PI / 2 - 0.08; fog.position.set(s * 0.36, 0.62, 3.78); body.add(fog);
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.06, 14), TRUCK.grille); rim.rotation.x = Math.PI / 2 - 0.08; rim.position.set(s * 0.36, 0.62, 3.76); body.add(rim);
+    box(0.12, 0.08, 0.04, TRUCK.amber, s * 0.82, 1.15, 3.66);
+    box(0.1, 0.04, 0.04, TRUCK.lamp, s * 0.55, 1.15, 3.67);
+    box(0.25, 0.12, 0.05, TRUCK.tail, s * 0.95, 1.1, -3.72);
+  });
+  box(1.9, 0.12, 0.18, TRUCK.grille, 0, 0.48, 3.78); // bumper
+  box(0.4, 0.2, 0.02, TRUCK.plate, 0, 0.95, -3.73); // rear plate
+
+  // raked windshield, side door windows, rear side windows
   const fb = V(0, CB.y, CB.z1), ft = V(0, CT.y, CT.z1);
   [-1, 1].forEach((s) => {
-    const lo = along(fb, ft, 0.15), hi = along(fb, ft, 0.85);
-    const wLo = lerp(CB.w, CT.w, 0.15) - 0.12, wHi = lerp(CB.w, CT.w, 0.85) - 0.1;
+    const lo = along(fb, ft, 0.08), hi = along(fb, ft, 0.92);
+    const wLo = lerp(CB.w, CT.w, 0.08) - 0.08, wHi = lerp(CB.w, CT.w, 0.92) - 0.06;
     const pts = s > 0
-      ? [V(0.05, lo.y, lo.z), V(wLo, lo.y, lo.z), V(wHi, hi.y, hi.z), V(0.05, hi.y, hi.z)]
-      : [V(-wLo, lo.y, lo.z), V(-0.05, lo.y, lo.z), V(-0.05, hi.y, hi.z), V(-wHi, hi.y, hi.z)];
+      ? [V(0.03, lo.y, lo.z), V(wLo, lo.y, lo.z), V(wHi, hi.y, hi.z), V(0.03, hi.y, hi.z)]
+      : [V(-wLo, lo.y, lo.z), V(-0.03, lo.y, lo.z), V(-0.03, hi.y, hi.z), V(-wHi, hi.y, hi.z)];
     body.add(plateOn(pts, 0.03, TRUCK.glass));
   });
+  sidePlates(CB, CT, 0.95, 0.75, 2.05, 2.62, TRUCK.glass);
+  sidePlates(CB, CT, 0.05, 0.75, 2.05, 2.62, TRUCK.glass);
+  sidePlates(RB, RT, -1.3, 0.8, 2.05, 2.45, TRUCK.glass);
+  // door seams
+  [1.4, 0.5, -0.4].forEach((z) => sidePlates(UB, UT, z, 0.03, 1.55, 1.94, TRUCK.grille));
+
+  // two LED light bars on the cab roof, amber beacon at the back
   [-1, 1].forEach((s) => {
-    [0.55, -0.45].forEach((zc) => {
-      const len = 0.72, yb = 2.05, yt = 2.55;
-      const xb = s * lerp(CB.w, CT.w, (yb - CB.y) / (CT.y - CB.y)), xt = s * lerp(CB.w, CT.w, (yt - CB.y) / (CT.y - CB.y));
-      const pts = s > 0
-        ? [V(xb, yb, zc + len / 2), V(xb, yb, zc - len / 2), V(xt, yt, zc - len / 2), V(xt, yt, zc + len / 2)]
-        : [V(xb, yb, zc - len / 2), V(xb, yb, zc + len / 2), V(xt, yt, zc + len / 2), V(xt, yt, zc - len / 2)];
-      body.add(plateOn(pts, 0.03, TRUCK.glass));
-    });
+    box(0.42, 0.08, 0.12, TRUCK.grille, s * 0.5, CT.y + 0.04, CT.z1 - 0.12);
+    for (let i = -2; i <= 2; i++) box(0.05, 0.05, 0.02, TRUCK.lamp, s * 0.5 + i * 0.08, CT.y + 0.05, CT.z1 - 0.05);
   });
+  cyl(0.07, 0.08, 0.12, TRUCK.amber, 0.6, RT.y + 0.06, -2.6);
 
-  // camera cage on the roof: tinted glass dome with metal ribs; the lens inside follows the tornado
-  const turret = new THREE.Group(); turret.position.set(0, CT.y, -0.45); body.add(turret);
-  const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.66, 0.16, 16), TRUCK.panel); ring.position.y = 0.08; turret.add(ring);
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.58, 16, 10, 0, TAU, 0, Math.PI / 2), TRUCK.dome); dome.position.y = 0.16; turret.add(dome);
-  for (let i = 0; i < 6; i++) {
-    const rib = new THREE.Mesh(new THREE.TorusGeometry(0.585, 0.022, 4, 16, Math.PI), TRUCK.body);
-    rib.position.y = 0.16; rib.rotation.y = i * Math.PI / 6; turret.add(rib);
-  }
-  const cam = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.26, 0.42), TRUCK.lens); cam.position.set(0, 0.36, 0.05); turret.add(cam);
-  const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.14, 12), TRUCK.glass); lens.rotation.x = Math.PI / 2; lens.position.set(0, 0.36, 0.32); turret.add(lens);
+  // faceted camera cage: glass panes in a dark frame; the IMAX camera inside follows the tornado
+  const turret = new THREE.Group(); turret.position.set(0, CT.y, -0.25); body.add(turret);
+  const cageGeo = new THREE.CylinderGeometry(0.5, 0.82, 0.62, 8, 1);
+  const cage = new THREE.Mesh(cageGeo, TRUCK.dome); cage.position.y = 0.31; turret.add(cage);
+  const frame = new THREE.LineSegments(new THREE.EdgesGeometry(cageGeo), new THREE.LineBasicMaterial({ color: 0x15171a }));
+  frame.position.y = 0.31; turret.add(frame);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, 0.06, 8), TRUCK.panel); cap.position.y = 0.64; turret.add(cap);
+  const hatch = new THREE.Group(); hatch.position.set(0, 0.67, -0.25); turret.add(hatch); // hinged at the back, propped open
+  const lid = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.04, 0.55), TRUCK.panel); lid.position.z = 0.27; hatch.add(lid);
+  const lidGlass = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.045, 0.42), TRUCK.glass); lidGlass.position.z = 0.27; hatch.add(lidGlass);
+  hatch.rotation.x = -0.9;
+  const cam = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.26, 0.4), TRUCK.lens); cam.position.set(0, 0.3, 0.05); turret.add(cam);
+  const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.1, 14), TIV2_LENS); lens.rotation.x = Math.PI / 2; lens.position.set(0, 0.3, 0.29); turret.add(lens);
 
-  // antenna mast with anemometer at the back of the roof
-  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.9, 6), TRUCK.chrome); mast.position.set(-0.45, CT.y + 0.95, CT.z0 + 0.15); body.add(mast);
-  const anemo = new THREE.Group(); anemo.position.set(-0.45, CT.y + 1.95, CT.z0 + 0.15); body.add(anemo);
+  // weather mast at the back left: cross arm, radiation shield, anemometer on top, whips
+  const mx = -0.7, mz = -1.6, mTop = RT.y + 2.0;
+  cyl(0.035, 0.04, 2.0, TRUCK.grille, mx, RT.y + 1.0, mz, 8);
+  box(0.03, 0.03, 0.9, TRUCK.grille, mx, mTop - 0.35, mz);
+  cyl(0.06, 0.06, 0.2, TRUCK.plate, mx, mTop - 0.48, mz + 0.4, 10);
+  box(0.06, 0.08, 0.16, TRUCK.plate, mx, mTop - 0.3, mz - 0.42);
+  const anemo = new THREE.Group(); anemo.position.set(mx, mTop + 0.05, mz); body.add(anemo);
   for (let i = 0; i < 3; i++) {
     const holder = new THREE.Group(); holder.rotation.y = i * TAU / 3;
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.02), TRUCK.chrome); arm.position.x = 0.15; holder.add(arm);
-    const cup = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), TRUCK.chrome); cup.position.x = 0.3; holder.add(cup);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 0.02), TRUCK.chrome); arm.position.x = 0.12; holder.add(arm);
+    const cup = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), TRUCK.chrome); cup.position.x = 0.24; holder.add(cup);
     anemo.add(holder);
   }
-  const whip = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.1, 4), TRUCK.skirt); whip.position.set(0.5, CT.y + 0.55, CT.z0 + 0.2); body.add(whip);
+  [[-0.95, -2.4, 1.6], [0.85, -0.9, 1.3]].forEach(([x, z, h]) => cyl(0.008, 0.012, h, TRUCK.grille, x, RT.y + h / 2, z, 4));
 
-  // black flared skirts: front, angled front corners, sides, rear corners and rear.
-  // Each panel leans out at the bottom and drops to the ground when the hydraulics deploy.
+  // flaps: front corners flare out beside the front box; long side flaps; one across the back.
+  // Each drops to the ground when the hydraulics deploy; hazard tape runs along the bottom.
   const skirts = [];
-  const addSkirt = (w, x, z, yaw, h) => {
-    h = h || 1.15;
+  const addSkirt = (w, x, z, yaw, h, lean) => {
     const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = yaw;
-    const lean = new THREE.Group(); lean.rotation.x = -0.22; g.add(lean); // top leans in, bottom flares outward
-    const plate = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.08), TRUCK.skirt); plate.position.y = h / 2; lean.add(plate);
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(w + 0.01, 0.07, 0.09), TRUCK.hazard.clone());
+    const tilt = new THREE.Group(); tilt.rotation.x = -(lean || 0.16); g.add(tilt); // bottom flares outward
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.07), TRUCK.skirt); panel.position.y = h / 2; tilt.add(panel);
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(w * 0.85, 0.07, 0.08), TRUCK.hazard.clone());
     stripe.material.map = HAZARD.clone(); stripe.material.map.needsUpdate = true; stripe.material.map.repeat.set(w / 0.5, 1);
-    stripe.position.y = 0.05; lean.add(stripe);
-    body.add(g); skirts.push({ g, up: 0.2, down: -0.12 }); // low enough to hide the wheels, like the real truck
-    return { g, lean };
-  };
-  const front = addSkirt(1.9, 0, 3.12, 0);
-  const plate = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 0.02), TRUCK.plate); plate.position.set(0, 0.62, 0.06); front.lean.add(plate);
-  addSkirt(0.95, 1.18, 2.78, Math.PI / 4);
-  addSkirt(0.95, -1.18, 2.78, -Math.PI / 4);
-  addSkirt(4.3, 1.43, -0.05, Math.PI / 2);
-  addSkirt(4.3, -1.43, -0.05, -Math.PI / 2);
-  addSkirt(0.95, 1.18, -2.86, Math.PI * 3 / 4);
-  addSkirt(0.95, -1.18, -2.86, -Math.PI * 3 / 4);
-  addSkirt(1.9, 0, -3.2, Math.PI);
-
-  // red hydraulic rams with yellow tips: diagonal at the front, upright at the rear.
-  // The chrome rod slides out along the ram's own axis and into the ground.
-  const spikes = [];
-  const UPV = V(0, 1, 0);
-  const addRam = (top, bottom) => {
-    const dir = new THREE.Vector3().subVectors(bottom, top); const len = dir.length(); dir.normalize();
-    const q = new THREE.Quaternion().setFromUnitVectors(UPV, dir);
-    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, len, 10), TRUCK.red); cyl.quaternion.copy(q); cyl.position.copy(top).add(bottom).multiplyScalar(0.5); body.add(cyl);
-    const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.14, 10), TRUCK.yellow); tip.quaternion.copy(q); tip.position.copy(bottom).addScaledVector(dir, -0.07); body.add(tip);
-    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1, 8), TRUCK.chrome); rod.quaternion.copy(q); body.add(rod);
-    // fully deployed the rod tip reaches 0.35 m under the ground (body is lowered 0.22 m by then)
-    const maxL = Math.max(0.2, (bottom.y - (-0.35 + 0.22)) / -dir.y);
-    spikes.push({ rod, p0: bottom.clone(), dir, minL: 0.05, maxL });
+    stripe.position.set(0, 0.06, 0.01); tilt.add(stripe);
+    body.add(g); skirts.push({ g, up: 0.3, down: -0.08 });
   };
   [-1, 1].forEach((s) => {
-    addRam(V(s * 1.42, 1.95, 2.0), V(s * 1.55, 0.75, 2.65));
-    addRam(V(s * 1.5, 1.55, -2.2), V(s * 1.55, 0.7, -2.2));
+    addSkirt(1.45, s * 1.3, 2.95, s * (Math.PI / 2 - 0.27), 1.35, 0.25);
+    addSkirt(5.6, s * 1.45, -0.75, s * Math.PI / 2, 1.2, 0.14);
   });
+  addSkirt(2.2, 0, -3.8, Math.PI, 1.0, 0.12);
 
-  // six wheels mostly hidden by the skirts: one front axle, tandem rear
+  // red hydraulic spikes with red-and-white striped sleeves on the side flaps, front and back
+  const spikes = [];
+  [-1, 1].forEach((s) => [[1.75, 1.0], [-2.75, 0.85]].forEach(([z, k]) => {
+    const top = V(s * 1.32, 0.6 + 1.5 * k, z), bottom = V(s * 1.6, 0.42, z - 0.12);
+    hydraulicRam(body, spikes, top, bottom, TRUCK.red, TRUCK.trim);
+    const dir = bottom.clone().sub(top), len = dir.length(); dir.normalize();
+    const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.086, 0.086, len * 0.26, 12), TIV2_STRIPES);
+    sleeve.quaternion.setFromUnitVectors(RAM_UP, dir); sleeve.position.copy(top).addScaledVector(dir, len * 0.76); body.add(sleeve);
+  }));
+
+  // six wheels: front axle under the front box, tandem rear
   const wheels = [];
-  const tireGeo = (r) => new THREE.CylinderGeometry(r, r, 0.46, 16);
-  [[1.12, 2.0, 0.5, true], [-1.12, 2.0, 0.5, true], [1.12, -1.3, 0.55, false], [-1.12, -1.3, 0.55, false], [1.12, -2.5, 0.55, false], [-1.12, -2.5, 0.55, false]].forEach(([x, z, r, frontW]) => {
-    const steer = new THREE.Group(); steer.position.set(x, r, z); root.add(steer);
+  [[2.55, true], [-1.75, false], [-2.9, false]].forEach(([z, frontW]) => [-1, 1].forEach((s) => {
+    const r = 0.56;
+    const steer = new THREE.Group(); steer.position.set(s * 1.0, r, z); root.add(steer);
     const spin = new THREE.Group(); steer.add(spin);
-    const tire = new THREE.Mesh(tireGeo(r), TRUCK.tire); tire.rotation.z = Math.PI / 2; spin.add(tire);
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.5, r * 0.5, 0.48, 10), TRUCK.hub); hub.rotation.z = Math.PI / 2; spin.add(hub);
+    const tire = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.46, 18), TRUCK.tire); tire.rotation.z = Math.PI / 2; spin.add(tire);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.48, r * 0.48, 0.48, 10), TRUCK.hub); hub.rotation.z = Math.PI / 2; spin.add(hub);
     wheels.push({ steer, spin, r, front: frontW });
-  });
+  }));
 
   return { root, body, skirts, spikes, wheels, turret, anemo };
 }
@@ -1496,10 +1534,10 @@ function toPBR(dict) {
 // Vehicles in the garage. maxF is top speed in m/s; dmg and push scale armor damage and wind
 // shove; fuelUse scales how fast the tank empties; paint lists [material, shade] pairs to recolor.
 const VEHICLES = [
-  { id: 'tiv2', name: 'TIV2', stats: 'Top speed 58 mph · Heavy armor', build: buildTruck, maxF: 26, dmg: 1, push: 1, fuelUse: 1, paint: [[TRUCK.body, 1], [TRUCK.panel, 0.85]] },
-  { id: 'joker1', name: 'Joker 1', stats: 'Top speed 69 mph · Lighter armor', build: buildJoker, maxF: 31, dmg: 1.25, push: 1.2, fuelUse: 1.2, paint: [[JOKER.body, 1], [JOKER.panel, 1.2]] },
-  { id: 'joker2', name: 'Joker 2', stats: 'Top speed 51 mph · Heaviest armor', build: buildJoker2, maxF: 23, dmg: 0.8, push: 0.8, fuelUse: 1.3, paint: [[JOKER2.body, 1], [JOKER2.skirt, 0.8], [JOKER2.panel, 1.15]] },
-  { id: 'radar', name: 'Radar Truck', stats: 'Top speed 60 mph · Scans storms · Light armor', build: buildRadarTruck, maxF: 27, dmg: 1.6, push: 1.4, fuelUse: 0.9, canScan: true, paint: [[RADAR.cab, 1]] }
+  { id: 'tiv2', name: 'TIV2', stats: 'Top speed 58 mph · Holds 235 mph locked · Slow deploy', build: buildTruck, maxF: 26, dmg: 1, push: 1, fuelUse: 1, resist: 235, deploy: 0.7, paint: [[TRUCK.body, 1], [TRUCK.panel, 0.85]] },
+  { id: 'joker1', name: 'Joker 1', stats: 'Top speed 69 mph · Holds 185 mph locked · Fast deploy', build: buildJoker, maxF: 31, dmg: 1.25, push: 1.2, fuelUse: 1.2, resist: 185, deploy: 1.25, paint: [[JOKER.body, 1], [JOKER.panel, 1.2]] },
+  { id: 'joker2', name: 'Joker 2', stats: 'Top speed 51 mph · Holds 210 mph locked · Heaviest armor', build: buildJoker2, maxF: 23, dmg: 0.8, push: 0.8, fuelUse: 1.3, resist: 210, deploy: 1, paint: [[JOKER2.body, 1], [JOKER2.skirt, 0.8], [JOKER2.panel, 1.15]] },
+  { id: 'radar', name: 'Radar Truck', stats: 'Top speed 60 mph · Scans storms · Holds 140 mph locked', build: buildRadarTruck, maxF: 27, dmg: 1.6, push: 1.4, fuelUse: 0.9, resist: 140, deploy: 1, canScan: true, paint: [[RADAR.cab, 1]] }
 ];
 VEHICLES.forEach((v) => v.paint.forEach((p) => p.push(p[0].color.getHex())));
 const fleet = {};
@@ -1513,7 +1551,7 @@ const PAINTS = [
 ];
 const UPGRADES = [
   { key: 'engine', name: 'Engine tune', desc: '+8% top speed per level', cost: [800, 1600, 3000] },
-  { key: 'plating', name: 'Armor plating', desc: '12% less damage and wind shove per level', cost: [900, 1800, 3200] },
+  { key: 'plating', name: 'Armor plating', desc: '12% less damage and wind shove, holds 10 mph more locked, per level', cost: [900, 1800, 3200] },
   { key: 'tank', name: 'Long-range tank', desc: 'Uses 25% less fuel per level', cost: [600, 1400] },
   { key: 'hydro', name: 'Fast hydraulics', desc: 'Locks down 25% faster per level', cost: [700, 1500] }
 ];
@@ -1561,7 +1599,8 @@ function vstats() {
   const v = VEHICLES[G.vehicle], s = vehicleState(v);
   return {
     maxF: v.maxF * (1 + 0.08 * s.engine), dmg: v.dmg * (1 - 0.12 * s.plating), push: v.push * (1 - 0.12 * s.plating),
-    fuelUse: v.fuelUse * Math.pow(0.75, s.tank), hydro: 1 + 0.25 * s.hydro, canScan: !!v.canScan
+    fuelUse: v.fuelUse * Math.pow(0.75, s.tank), hydro: (1 + 0.25 * s.hydro) * v.deploy, canScan: !!v.canScan,
+    resist: v.resist + 10 * s.plating // highest wind (mph) it survives locked down
   };
 }
 const probeCap = () => 3 + career.rack * 3;
@@ -2137,7 +2176,16 @@ function updateCar(dt) {
 
   // tornado wind
   const w = windAt(c.x, c.z);
-  const locked = h.state === HYD.LOCKED;
+  let locked = h.state === HYD.LOCKED;
+  // past its wind threshold even a locked-down vehicle is ripped loose
+  const windMph = w.ms * 2.237;
+  if (locked && windMph > VH.resist) {
+    Object.assign(h, { state: HYD.RETRACTED, t: 0, susp: 0, skirt: 0, spike: 0 });
+    locked = false; G.scan = false; G._pushHint = 6; // keep this message up instead of the push warning
+    c.armor -= 15 * VH.dmg; G.camShake = 1;
+    AudioFX.clunk(); AudioFX.burst('lowpass', 600, 0.8, 0.6);
+    banner(`${Math.round(windMph)} mph winds tore you loose! Locked down, this vehicle holds ${Math.round(VH.resist)} mph.`, 'warn', 3.2);
+  }
   const push = clamp((w.ms - 28) / 40, 0, 1.6);
   if (!locked && push > 0) {
     c.driftX += w.x * push * 18 * VH.push * dt; c.driftZ += w.z * push * 18 * VH.push * dt;
@@ -2648,7 +2696,7 @@ VEHICLES.forEach((v, i) => {
 function renderGarage() {
   vehButtons.forEach(([b, i]) => b.setAttribute('aria-pressed', String(i === G.vehicle)));
   const v = VEHICLES[G.vehicle], s = vehicleState(v), st = vstats();
-  $('vehStatus').innerHTML = `<span>Armor <b>${Math.round(G.car.armor)}%</b></span><span>Fuel <b>${Math.ceil(G.fuel)}%</b></span><span>Top speed <b>${Math.round(st.maxF * 2.237)} mph</b></span>` + (v.canScan ? '<span><b>Can scan storms</b></span>' : '');
+  $('vehStatus').innerHTML = `<span>Armor <b>${Math.round(G.car.armor)}%</b></span><span>Fuel <b>${Math.ceil(G.fuel)}%</b></span><span>Top speed <b>${Math.round(st.maxF * 2.237)} mph</b></span><span>Holds <b>${Math.round(st.resist)} mph</b> locked</span>` + (v.canScan ? '<span><b>Can scan storms</b></span>' : '');
   const sw = $('paintRow'); sw.innerHTML = '';
   PAINTS.forEach((pt, i) => {
     const b = document.createElement('button'); b.className = 'swatch';
