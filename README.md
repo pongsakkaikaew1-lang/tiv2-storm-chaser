@@ -30,7 +30,20 @@ garage each vehicle can be painted and upgraded (engine, armor plating, fuel tan
 
 ## Play
 
-Open the GitHub Pages link for this repository. Turn the tablet sideways for the best view.
+- **Android app:** open the repository's **Releases** page on your phone or tablet, download
+  `TIV2-Storm-Chaser.apk` from the newest release, open it and allow "Install unknown apps" when
+  Android asks. The app plays fully offline.
+- **Browser:** open the GitHub Pages link for this repository. After the first visit it also works
+  offline, and it can be added to the home screen.
+
+Turn the device sideways for the best view. On older devices pick **Graphics: Low** on the start screen
+(no shadows, lighter rendering).
+
+## Android build
+
+Every push runs `.github/workflows/android.yml`: it wraps the game in a Capacitor WebView app
+(landscape, full screen, screen kept on, files bundled inside the APK), builds a debug-signed APK and
+attaches it to a new release. `android-app/` holds the app's launcher icons, splash and main activity.
 
 ## Controls
 
@@ -44,4 +57,5 @@ Open the GitHub Pages link for this repository. Turn the tablet sideways for the
 | View | C | Change camera view |
 | Pause | P / Esc | Pause, or return to base |
 
-Built with [three.js](https://threejs.org/) as a single `index.html`, no build step.
+Built with [three.js](https://threejs.org/) r128 (`vendor/`) as a single `index.html`, no build step.
+Fonts: Fredoka and Nunito (SIL Open Font License, `fonts/`).

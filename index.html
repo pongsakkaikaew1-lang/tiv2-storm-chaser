@@ -8,14 +8,20 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d1116'/%3E%3Cpath d='M18 14h28l-6 10h-16zM22 26h20l-5 9h-10zM26 37h12l-4 8h-4zM29 47h6l-3 7z' fill='%23ff8a1f'/%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>body { margin: 0; }</style><title>TIV2 Storm Chaser</title>
 </head>
 <body>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;600;700&display=swap">
 <style>
+/* fonts ship with the game so it works offline (SIL Open Font License, see fonts/) */
+@font-face { font-family: "Fredoka"; font-weight: 500; font-display: swap; src: url("fonts/fredoka-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Fredoka"; font-weight: 600; font-display: swap; src: url("fonts/fredoka-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Nunito"; font-weight: 400; font-display: swap; src: url("fonts/nunito-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Nunito"; font-weight: 600; font-display: swap; src: url("fonts/nunito-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Nunito"; font-weight: 700; font-display: swap; src: url("fonts/nunito-latin-700-normal.woff2") format("woff2"); }
+
 /* Layout: full-screen 3D view; HUD pinned to the corners like a chase-truck dashboard.
    Deliberately single dark theme: it is a game screen drawn over a stormy sky. */
 :root {
@@ -249,6 +255,11 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
         <button data-level="1" aria-pressed="true">Normal<small>EF0–EF4 tornadoes</small></button>
         <button data-level="2" aria-pressed="false">Extreme<small>EF2–EF5 tornadoes</small></button>
       </div>
+      <div class="seg-label">Graphics</div>
+      <div id="gfxSeg" class="seg" role="group" aria-label="Graphics quality">
+        <button data-gfx="high" aria-pressed="true">High<small>Shadows and full detail</small></button>
+        <button data-gfx="low" aria-pressed="false">Low<small>Faster on older devices</small></button>
+      </div>
       <button id="btnStart" class="go">Start chasing</button>
       <p id="rotateHint">Turn the tablet sideways for the best view.</p>
     </div>
@@ -312,7 +323,7 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="vendor/three.min.js"></script>
 <script>
 (() => {
 'use strict';
@@ -340,7 +351,13 @@ const srnd = (a, b) => a + (b - a) * srand();
 const canvas = $('game');
 const dpr = window.devicePixelRatio || 1;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: dpr < 2, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(dpr, 1.5));
+// High: sun shadows and a sharper picture; Low: for older phones and tablets
+const GFX = { high: store.get('tiv2-gfx', 'high') !== 'low' };
+renderer.setPixelRatio(GFX.high ? Math.min(dpr, 1.5) : 1);
+renderer.shadowMap.enabled = GFX.high;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const maxAniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+const allTex = []; // procedural textures; Low quality turns their anisotropic filtering off
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, 1, 0.5, 3200);
 const WORLD = 800; // half size of the playable plains, meters
@@ -355,6 +372,52 @@ scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff4e0, CALM.sun);
 sun.position.set(300, 500, 160);
 scene.add(sun);
+// the shadow box follows the player's vehicle (see updateVisuals)
+const SUN_DIR = sun.position.clone().normalize();
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -70, right: 70, top: 70, bottom: -70, near: 100, far: 1100 });
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
+scene.add(sun.target);
+// see-through decals and glows never cast shadows
+const shadows = (obj, cast, receive) => obj.traverse((o) => { if (o.isMesh) { o.castShadow = cast && !o.material.transparent; o.receiveShadow = receive; } });
+
+// soft sky reflection for the vehicles' paint, glass and chrome
+const ENV = (() => {
+  const g = new THREE.SphereGeometry(10, 32, 16), pos = g.attributes.position, cols = [];
+  const top = new THREE.Color(0x6f9fd8), hor = new THREE.Color(0xdfe9f2), low = new THREE.Color(0x56633f), c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i) / 10;
+    if (y >= 0) c.copy(hor).lerp(top, Math.pow(y, 0.6)); else c.copy(hor).lerp(low, Math.min(1, -y * 4));
+    cols.push(c.r, c.g, c.b);
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  const envScene = new THREE.Scene();
+  envScene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+  const pm = new THREE.PMREMGenerator(renderer);
+  const t = pm.fromScene(envScene, 0.02).texture; pm.dispose();
+  return t;
+})();
+
+// procedural textures, drawn once on a canvas
+function canvasTex(w, h, draw, rx, ry) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx || 1, ry || 1); t.anisotropy = GFX.high ? maxAniso : 1;
+  allTex.push(t);
+  return t;
+}
+const speckle = (g, w, h, n, colors, size) => {
+  for (let i = 0; i < n; i++) { g.fillStyle = colors[i % colors.length]; g.fillRect(Math.random() * w, Math.random() * h, size, size * (1 + Math.random() * 2)); }
+};
+const blotches = (g, w, h, n, colors, rMin, rMax) => {
+  for (let i = 0; i < n; i++) {
+    const x = Math.random() * w, y = Math.random() * h, r = rMin + Math.random() * (rMax - rMin);
+    const grd = g.createRadialGradient(x, y, 0, x, y, r); grd.addColorStop(0, colors[i % colors.length]); grd.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grd; g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+};
 
 // sky dome with a vertical gradient that darkens as the supercell builds
 const skyGeo = new THREE.SphereGeometry(2600, 24, 14);
@@ -408,24 +471,69 @@ const HAZARD = hazardTexture();
 // Farmland world
 // ---------------------------------------------------------------------------
 const lam = (color, extra) => new THREE.MeshLambertMaterial(Object.assign({ color }, extra || {}));
+const GRASS_TEX = canvasTex(512, 512, (g, w, h) => {
+  g.fillStyle = '#65843f'; g.fillRect(0, 0, w, h);
+  blotches(g, w, h, 30, ['rgba(120,145,70,0.22)', 'rgba(72,98,46,0.25)'], 30, 90);
+  for (let i = 0; i < 26000; i++) { // short blades of grass
+    const x = Math.random() * w, y = Math.random() * h, l = 1 + Math.random() * 3;
+    g.fillStyle = ['rgba(80,110,50,0.55)', 'rgba(130,160,80,0.45)', 'rgba(100,130,60,0.5)', 'rgba(150,165,90,0.35)'][i % 4];
+    g.fillRect(x, y, 1, l);
+  }
+}, WORLD * 4 / 12, WORLD * 4 / 12);
+// grey crop textures: the field's own color tints them
+const ROWS_TEX = canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = '#c8c8c8'; g.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 16) { g.fillStyle = 'rgba(40,40,40,0.35)'; g.fillRect(0, y, w, 6); g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect(0, y + 8, w, 4); }
+  speckle(g, w, h, 2500, ['rgba(0,0,0,0.18)', 'rgba(255,255,255,0.2)'], 2);
+});
+const WHEAT_TEX = canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = '#d0d0d0'; g.fillRect(0, 0, w, h);
+  blotches(g, w, h, 18, ['rgba(255,255,255,0.35)', 'rgba(0,0,0,0.15)'], 20, 70);
+  for (let i = 0; i < 5000; i++) { g.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.2)'; g.fillRect(Math.random() * w, Math.random() * h, 1, 5); }
+});
+const ROAD_TEX = canvasTex(256, 1024, (g, w, h) => {
+  g.fillStyle = '#4a4e52'; g.fillRect(0, 0, w, h);
+  speckle(g, w, h, 40000, ['rgba(30,33,36,0.35)', 'rgba(120,124,128,0.25)', 'rgba(60,64,68,0.4)'], 1);
+  g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(52, 0, 36, h); g.fillRect(168, 0, 36, h); // worn wheel tracks
+  g.fillStyle = 'rgba(232,230,220,0.9)'; g.fillRect(10, 0, 5, h); g.fillRect(w - 15, 0, 5, h); // edge lines
+  for (let i = 0; i < 6; i++) { g.strokeStyle = 'rgba(20,20,20,0.5)'; g.lineWidth = 1; g.beginPath(); let x = Math.random() * w, y = Math.random() * h; g.moveTo(x, y); for (let k = 0; k < 6; k++) { x += (Math.random() - 0.5) * 20; y += Math.random() * 20; g.lineTo(x, y); } g.stroke(); }
+});
 const MAT = {
-  grass: lam(0x6d8c46), road: lam(0x3b3f43), dirt: lam(0x9a8461), dash: lam(0xe6c74a),
+  grass: lam(0xffffff, { map: GRASS_TEX }), road: lam(0xffffff, { map: ROAD_TEX }), dirt: lam(0x9a8461), dash: lam(0xe6c74a),
   house: lam(0xe9e1d2), roofDark: lam(0x4a4f57), barn: lam(0xa33a2c), barnRoof: lam(0x3e3a38), silo: lam(0xb7bcc2),
   trunk: lam(0x5a4632), leaf: lam(0x3f6b34), pole: lam(0x6b5a45), hay: lam(0xd8b45a), fence: lam(0x8a7458)
 };
 const obstacles = []; // {x, z, r} the truck bumps into
 
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(WORLD * 4, WORLD * 4), MAT.grass);
+const groundGeo = new THREE.PlaneGeometry(WORLD * 4, WORLD * 4, 80, 80);
+{
+  const pos = groundGeo.attributes.position, cols = [];
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i);
+    const n = 0.5 + 0.25 * Math.sin(x * 0.011 + Math.sin(y * 0.007) * 2) + 0.25 * Math.sin(y * 0.013 + Math.cos(x * 0.006) * 2);
+    cols.push(0.82 + n * 0.3, 0.86 + n * 0.22, 0.8 + n * 0.16);
+  }
+  groundGeo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+}
+MAT.grass.vertexColors = true;
+const ground = new THREE.Mesh(groundGeo, MAT.grass);
 ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
 scene.add(ground);
 
 // crop fields in a few shades
-const fieldCols = [0x7d9b4f, 0x8fa65a, 0xa9945f, 0x657f40, 0xb6a56c, 0x91a35e];
+const fieldCols = [0x8fae5a, 0xa3ba66, 0xc9ab6c, 0x759247, 0xd6c07a, 0x9a7a55];
+const wetMats = [[MAT.grass, 0xffffff], [MAT.road, 0xffffff]]; // darkened as the storm soaks the ground
 for (let i = 0; i < 70; i++) {
-  const w = srnd(60, 170), d = srnd(60, 170);
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), lam(fieldCols[i % fieldCols.length]));
-  m.rotation.x = -Math.PI / 2;
+  const w = srnd(60, 170), d = srnd(60, 170), col = fieldCols[i % fieldCols.length];
+  const tex = (col === 0xc9ab6c || col === 0xd6c07a ? WHEAT_TEX : ROWS_TEX).clone();
+  tex.needsUpdate = true; allTex.push(tex); tex.repeat.set(w / 14, d / 14);
+  const mat = lam(col, { map: tex });
+  wetMats.push([mat, col]);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat);
+  m.rotation.x = -Math.PI / 2; m.rotation.z = srand() < 0.5 ? 0 : Math.PI / 2;
   m.position.set(srnd(-WORLD, WORLD), 0.02, srnd(-WORLD, WORLD));
+  m.receiveShadow = true;
   scene.add(m);
 }
 
@@ -433,8 +541,11 @@ for (let i = 0; i < 70; i++) {
 const ROADS = [-400, 0, 400];
 function addRoad(x, z, alongX) {
   const len = WORLD * 2.2;
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(alongX ? len : 9, alongX ? 9 : len), MAT.road);
-  m.rotation.x = -Math.PI / 2; m.position.set(x, 0.05, z); scene.add(m);
+  const geo = new THREE.PlaneGeometry(9, len);
+  geo.attributes.uv.array.forEach((v, i, a) => { if (i % 2) a[i] = v * len / 36; }); // texture tiles every 36 m
+  geo.rotateX(-Math.PI / 2); if (alongX) geo.rotateY(Math.PI / 2);
+  const m = new THREE.Mesh(geo, MAT.road);
+  m.position.set(x, 0.05, z); m.receiveShadow = true; scene.add(m);
 }
 ROADS.forEach((v) => { addRoad(0, v, true); addRoad(v, 0, false); });
 const dashGeo = new THREE.PlaneGeometry(0.35, 4);
@@ -486,7 +597,7 @@ function farmAt(x, z, rot) {
     }
     obstacles.push({ x, z, r: 8 });
   }
-  grp.position.set(x, 0, z); grp.rotation.y = rot; scene.add(grp);
+  grp.position.set(x, 0, z); grp.rotation.y = rot; shadows(grp, true, true); scene.add(grp);
 }
 for (let i = 0; i < 26; i++) {
   const road = ROADS[Math.floor(srand() * 3)];
@@ -501,7 +612,20 @@ for (let i = 0; i < 26; i++) {
 {
   const N = 260;
   const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.35, 0.45, 4, 6), MAT.trunk, N);
-  const leaves = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(3.2, 0), MAT.leaf, N);
+  // lumpy crown: each vertex pushed in or out by a hash of its position (so shared corners stay joined)
+  const crown = new THREE.IcosahedronGeometry(3.2, 1), cp = crown.attributes.position, nv = new THREE.Vector3();
+  for (let i = 0; i < cp.count; i++) {
+    nv.fromBufferAttribute(cp, i);
+    const k = 1 + 0.16 * Math.sin(nv.x * 3.1 + nv.y * 1.7) * Math.cos(nv.z * 2.3 - nv.y);
+    cp.setXYZ(i, nv.x * k, nv.y * k * 0.85, nv.z * k);
+  }
+  crown.computeVertexNormals();
+  const cn = crown.attributes.normal;
+  for (let i = 0; i < cp.count; i++) { nv.fromBufferAttribute(cp, i).normalize(); cn.setXYZ(i, nv.x, nv.y, nv.z); } // smooth, rounded shading
+  MAT.leaf.color.setHex(0xffffff);
+  const leaves = new THREE.InstancedMesh(crown, MAT.leaf, N);
+  const leaves2 = new THREE.InstancedMesh(crown, MAT.leaf, N);
+  const leafCol = new THREE.Color(), LEAF = [0x3f6b34, 0x4a7a3a, 0x355e2e, 0x5a7f3c, 0x466f30];
   const o = new THREE.Object3D();
   let n = 0;
   for (let i = 0; i < N * 2 && n < N; i++) {
@@ -510,11 +634,16 @@ for (let i = 0; i < 26; i++) {
     const s = srnd(0.8, 1.5);
     o.position.set(x, 2 * s, z); o.scale.set(s, s, s); o.rotation.set(0, srand() * TAU, 0); o.updateMatrix(); trunks.setMatrixAt(n, o.matrix);
     o.position.set(x, 5.2 * s, z); o.updateMatrix(); leaves.setMatrixAt(n, o.matrix);
+    const ox = srnd(-1.6, 1.6) * s, oz = srnd(-1.6, 1.6) * s;
+    o.position.set(x + ox, 6.6 * s, z + oz); o.scale.set(s * 0.68, s * 0.68, s * 0.68); o.updateMatrix(); leaves2.setMatrixAt(n, o.matrix);
+    leafCol.setHex(LEAF[Math.floor(srand() * LEAF.length)]).multiplyScalar(srnd(0.85, 1.12));
+    leaves.setColorAt(n, leafCol); leaves2.setColorAt(n, leafCol.multiplyScalar(1.08));
     if (s > 1.2) obstacles.push({ x, z, r: 1.6 });
     n++;
   }
-  trunks.count = leaves.count = n;
-  scene.add(trunks, leaves);
+  trunks.count = leaves.count = leaves2.count = n;
+  [trunks, leaves, leaves2].forEach((m) => { m.castShadow = true; });
+  scene.add(trunks, leaves, leaves2);
 
   const poles = new THREE.InstancedMesh(new THREE.BoxGeometry(0.35, 11, 0.35), MAT.pole, 120);
   const bars = new THREE.InstancedMesh(new THREE.BoxGeometry(3.4, 0.25, 0.25), MAT.pole, 120);
@@ -526,6 +655,7 @@ for (let i = 0; i < 26; i++) {
     p++;
   }
   poles.count = bars.count = p;
+  poles.castShadow = bars.castShadow = true;
   scene.add(poles, bars);
 }
 
@@ -538,12 +668,35 @@ for (let i = 0; i < 46; i++) {
   if (ROADS.some((r) => Math.abs(x - r) < 10 || Math.abs(z - r) < 10)) continue;
   m.rotation.z = Math.PI / 2; m.rotation.y = srand() * TAU;
   m.position.set(x, 0.9, z);
+  m.castShadow = true;
   scene.add(m);
   bales.push({ m, state: 'rest', a: 0, r: 0, y: 0.9, vx: 0, vy: 0, vz: 0, t: 0 });
 }
 
-// supercell cloud deck overhead
-const deck = new THREE.Mesh(new THREE.CircleGeometry(1700, 40), new THREE.MeshBasicMaterial({ color: 0x2a3036, transparent: true, opacity: 0, side: THREE.DoubleSide, fog: false, depthWrite: false }));
+// fair-weather cumulus far away; they fade as the storm takes over the sky
+const PUFF_TEX = canvasTex(256, 128, (g, w, h) => {
+  for (let i = 0; i < 26; i++) {
+    const x = 40 + Math.random() * (w - 80), y = 50 + Math.random() * 40 - Math.abs(x - w / 2) * 0.15, r = 18 + Math.random() * 30;
+    const grd = g.createRadialGradient(x, y - r * 0.3, 0, x, y, r);
+    grd.addColorStop(0, 'rgba(255,255,255,0.95)'); grd.addColorStop(0.6, 'rgba(236,240,245,0.7)'); grd.addColorStop(1, 'rgba(200,210,222,0)');
+    g.fillStyle = grd; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+  }
+  g.globalCompositeOperation = 'source-atop'; const shade = g.createLinearGradient(0, 0, 0, h);
+  shade.addColorStop(0, 'rgba(255,255,255,0)'); shade.addColorStop(1, 'rgba(120,135,155,0.55)'); g.fillStyle = shade; g.fillRect(0, 0, w, h);
+});
+const puffs = [];
+for (let i = 0; i < 28; i++) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: PUFF_TEX, transparent: true, depthWrite: false, fog: false }));
+  const a = srand() * TAU, d = srnd(1000, 2100), sc = srnd(300, 620);
+  sp.position.set(Math.cos(a) * d, srnd(240, 480), Math.sin(a) * d); sp.scale.set(sc, sc * 0.5, 1);
+  scene.add(sp); puffs.push(sp);
+}
+// supercell cloud deck overhead, with a lumpy cloud-base texture
+const DECK_TEX = canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = '#8a8f96'; g.fillRect(0, 0, w, h);
+  blotches(g, w, h, 70, ['rgba(40,44,50,0.55)', 'rgba(170,176,184,0.45)', 'rgba(20,22,26,0.4)'], 12, 46);
+}, 7, 7);
+const deck = new THREE.Mesh(new THREE.CircleGeometry(1700, 40), new THREE.MeshBasicMaterial({ color: 0x2a3036, map: DECK_TEX, transparent: true, opacity: 0, side: THREE.DoubleSide, fog: false, depthWrite: false }));
 deck.rotation.x = Math.PI / 2; deck.position.y = 330;
 scene.add(deck);
 
@@ -557,6 +710,39 @@ rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
 const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xb8c6d4, transparent: true, opacity: 0 }));
 rain.frustumCulled = false;
 scene.add(rain);
+
+// grey curtain of heavy rain in the storm's core, ahead and left of the tornado
+const SHAFT_TEX = canvasTex(256, 256, (g, w, h) => {
+  for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(210,218,228,${0.05 + Math.random() * 0.12})`; g.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 20 + Math.random() * 60); }
+}, 6, 1);
+const shaft = new THREE.Mesh(new THREE.CylinderGeometry(150, 220, 340, 28, 1, true),
+  new THREE.MeshBasicMaterial({ map: SHAFT_TEX, color: 0x8892a0, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
+shaft.position.y = 170; shaft.visible = false;
+scene.add(shaft);
+
+// lightning bolt: a jagged chain of thin glowing boxes from the cloud base to the ground
+const bolt = new THREE.Group(); bolt.visible = false; scene.add(bolt);
+const BOLT_MAT = new THREE.MeshBasicMaterial({ color: 0xeef3ff, fog: false });
+let boltT = 0;
+function strike(cx, cz) {
+  bolt.children.slice().forEach((m) => { bolt.remove(m); m.geometry.dispose(); });
+  const a = rnd(0, TAU), d = rnd(250, 900);
+  let p = new THREE.Vector3(cx + Math.cos(a) * d, 330, cz + Math.sin(a) * d);
+  const seg = (from, to, wdt) => {
+    const len = from.distanceTo(to);
+    const m = new THREE.Mesh(new THREE.BoxGeometry(wdt, len, wdt), BOLT_MAT);
+    m.position.copy(from).add(to).multiplyScalar(0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), to.clone().sub(from).normalize());
+    bolt.add(m);
+  };
+  while (p.y > 0) {
+    const q = new THREE.Vector3(p.x + rnd(-18, 18), Math.max(0, p.y - rnd(18, 40)), p.z + rnd(-18, 18));
+    seg(p, q, 1.6);
+    if (Math.random() < 0.25) seg(q, new THREE.Vector3(q.x + rnd(-40, 40), q.y - rnd(20, 50), q.z + rnd(-40, 40)), 0.8);
+    p = q;
+  }
+  bolt.visible = true; boltT = 0.22;
+}
 
 // ---------------------------------------------------------------------------
 // The TIV2 truck
@@ -1241,6 +1427,27 @@ function buildRadarTruck() {
   return { root, body, skirts: [], spikes, wheels, turret, anemo };
 }
 
+// vehicles get physically based materials: glossy paint, glass and chrome reflect the sky
+const pbrMats = [];
+const PBR = {
+  glass: [0.06, 0.1], chrome: [0.22, 1], tire: [0.92, 0], hub: [0.35, 0.8], dome: [0.1, 0.2], lens: [0.2, 0.4],
+  body: [0.48, 0.15], panel: [0.55, 0.15], cab: [0.4, 0.1], trim: [0.55, 0.2], box: [0.5, 0.2], bed: [0.65, 0.3],
+  skirt: [0.7, 0.1], dark: [0.65, 0.1], dish: [0.35, 0.1], red: [0.45, 0.1], yellow: [0.45, 0.1], purple: [0.4, 0.1]
+};
+function toPBR(dict) {
+  Object.keys(dict).forEach((k) => {
+    const m = dict[k];
+    if (!(m instanceof THREE.MeshLambertMaterial)) return;
+    const [roughness, metalness] = PBR[k] || [0.6, 0.2];
+    const n = new THREE.MeshStandardMaterial({
+      color: m.color, emissive: m.emissive, map: m.map, transparent: m.transparent, opacity: m.opacity,
+      side: m.side, depthWrite: m.depthWrite, roughness, metalness, envMap: ENV
+    });
+    pbrMats.push(n); dict[k] = n;
+  });
+}
+[TRUCK, JOKER, JOKER2, RADAR].forEach(toPBR);
+
 // Vehicles in the garage. maxF is top speed in m/s; dmg and push scale armor damage and wind
 // shove; fuelUse scales how fast the tank empties; paint lists [material, shade] pairs to recolor.
 const VEHICLES = [
@@ -1324,7 +1531,8 @@ function applyPaint(v, idx) {
 function setVehicle(i) {
   const v = VEHICLES[i] || VEHICLES[0];
   if (truck) { saveCareer(); scene.remove(truck.root); }
-  truck = fleet[v.id] || (fleet[v.id] = v.build());
+  if (!fleet[v.id]) { fleet[v.id] = v.build(); shadows(fleet[v.id].root, true, true); }
+  truck = fleet[v.id];
   scene.add(truck.root);
   G.vehicle = VEHICLES.indexOf(v);
   career.vehicle = v.id;
@@ -1366,10 +1574,42 @@ paintPoints(funnel, funData, (i) => { const g = 0.62 - funData[i].h * 0.22 + rnd
 paintPoints(cloud, cloudData, () => { const g = rnd(0.12, 0.19); return [g, g + 0.01, g + 0.025]; });
 paintPoints(dust, dustData, () => { const g = rnd(0.26, 0.36); return [g + 0.07, g, g - 0.06]; });
 
+// condensation funnel surface: a lathe with the same flare as the particles, wrapped in
+// spiralling streaks that scroll around it
+const FUNNEL_TEX = canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = 'rgba(190,196,204,0.55)'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 420; i++) {
+    const x = Math.random() * w, y = Math.random() * h, l = 30 + Math.random() * 90;
+    g.strokeStyle = Math.random() < 0.5 ? `rgba(255,255,255,${0.15 + Math.random() * 0.3})` : `rgba(70,76,84,${0.15 + Math.random() * 0.3})`;
+    g.lineWidth = 1 + Math.random() * 4; g.beginPath(); g.moveTo(x, y); g.lineTo(x + l, y - l * 0.35); g.stroke();
+  }
+  const fade = g.createLinearGradient(0, 0, 0, h); // v runs bottom (0) to top (1): ragged bottom edge
+  fade.addColorStop(0, 'rgba(0,0,0,0)'); fade.addColorStop(0.08, 'rgba(0,0,0,1)'); fade.addColorStop(1, 'rgba(0,0,0,1)');
+  g.globalCompositeOperation = 'destination-in'; g.fillStyle = fade; g.fillRect(0, 0, w, h);
+}, 3, 1);
+FUNNEL_TEX.flipY = false;
+const funnelMesh = (() => {
+  const prof = [];
+  for (let i = 0; i <= 28; i++) { const h = i / 28; prof.push(new THREE.Vector2((0.32 + 2.7 * Math.pow(h, 2.3)) * 0.6, h)); }
+  const m = new THREE.Mesh(new THREE.LatheGeometry(prof, 32), new THREE.MeshLambertMaterial({
+    map: FUNNEL_TEX, color: 0xd5dae0, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, fog: false
+  }));
+  m.visible = false; scene.add(m);
+  return m;
+})();
+
 function updateTornadoVisuals(dt, time) {
   const on = T.active && T.inten > 0.01;
-  funnel.visible = cloud.visible = dust.visible = on;
+  funnel.visible = cloud.visible = dust.visible = funnelMesh.visible = on;
   if (!on) return;
+  {
+    const condense = clamp(0.1 - T.ef * 0.025, 0, 0.1) * (1.5 - T.inten * 0.5);
+    const rs = T.R * (0.55 + 0.45 * T.inten);
+    funnelMesh.position.set(T.x, condense * T.H, T.z);
+    funnelMesh.scale.set(rs, T.H * (1 - condense), rs);
+    funnelMesh.material.opacity = 0.62 * T.inten;
+    FUNNEL_TEX.offset.x -= dt * (0.5 + T.ef * 0.08);
+  }
   const inten = T.inten, R = T.R, H = T.H;
   const fp = funnel.geometry.attributes.position.array;
   const condense = clamp(0.1 - T.ef * 0.025, 0, 0.1) * (1.5 - inten * 0.5);
@@ -1596,6 +1836,7 @@ function dropProbe() {
   const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.12, 14), lam(0x2a2d31)); ring.position.y = 0.06; m.add(ring);
   const light = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({ color: 0x6fe3a1 })); light.position.y = 0.58; m.add(light);
   m.position.set(c.x - Math.sin(c.h) * 5, 0, c.z - Math.cos(c.h) * 5);
+  shadows(m, true, false);
   scene.add(m);
   G.probeList.push({ m, light, hit: false, fly: null });
   AudioFX.clunk();
@@ -1917,7 +2158,7 @@ function updatePhase(dt) {
   // lightning
   if (G.storm > 0.5) {
     G.nextBolt -= dt;
-    if (G.nextBolt <= 0) { G.nextBolt = rnd(4, 11); G.flash = 1; setTimeout(() => AudioFX.thunder(), rnd(200, 1800)); }
+    if (G.nextBolt <= 0) { G.nextBolt = rnd(4, 11); G.flash = 1; strike(G.car.x, G.car.z); setTimeout(() => AudioFX.thunder(), rnd(200, 1800)); }
   }
   G.flash = Math.max(0, G.flash - dt * 3.2);
 }
@@ -1977,6 +2218,26 @@ function updateVisuals(dt, time, w) {
   if (shake > 0) camera.position.add(new THREE.Vector3(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)).multiplyScalar(shake * 0.5));
   G.camShake = Math.max(0, G.camShake - dt * 1.5);
   camera.lookAt(lookSm);
+
+  // sun and its shadow box follow the vehicle
+  sun.position.set(c.x + SUN_DIR.x * 600, SUN_DIR.y * 600, c.z + SUN_DIR.z * 600);
+  sun.target.position.set(c.x, 0, c.z); sun.target.updateMatrixWorld();
+  const envK = lerp(0.55, 0.2, G.storm) + G.flash * 0.6;
+  pbrMats.forEach((m) => { m.envMapIntensity = envK; });
+  // fair-weather clouds fade out, the ground gets darker as it soaks up the rain
+  puffs.forEach((p) => { p.material.opacity = clamp(1 - G.storm * 2.6, 0, 1) * 0.95; p.visible = GFX.high && p.material.opacity > 0.01; });
+  const wet = lerp(1, 0.68, G.storm);
+  wetMats.forEach(([m, col]) => { m.color.setHex(col).multiplyScalar(wet); });
+  // rain shaft in the storm's core
+  const core = T.active ? T : G.cell;
+  shaft.visible = !!core && !!G.plan;
+  if (shaft.visible) {
+    const dir = T.active ? T.yaw : G.plan.dir, mx = Math.cos(dir), mz = Math.sin(dir);
+    shaft.position.x = core.x + mx * 170 + mz * 120; shaft.position.z = core.z + mz * 170 - mx * 120;
+    shaft.material.opacity = 0.5 * G.storm * (T.active ? Math.max(0.5, T.inten) : 1);
+    SHAFT_TEX.offset.y += dt * 0.6;
+  }
+  if (boltT > 0) { boltT -= dt; if (boltT <= 0) bolt.visible = false; }
 
   // sky, cloud deck, rain
   paintSky(G.storm, G.flash);
@@ -2335,6 +2596,18 @@ document.querySelectorAll('#levelSeg button').forEach((b) => {
     document.querySelectorAll('#levelSeg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
   });
 });
+function setGfx(high) {
+  GFX.high = high; store.set('tiv2-gfx', high ? 'high' : 'low');
+  renderer.setPixelRatio(high ? Math.min(dpr, 1.5) : 1);
+  renderer.shadowMap.enabled = high;
+  allTex.forEach((t) => { t.anisotropy = high ? maxAniso : 1; t.needsUpdate = true; });
+  scene.traverse((o) => { if (o.material) [].concat(o.material).forEach((m) => { m.needsUpdate = true; }); });
+  pbrMats.forEach((m) => { m.needsUpdate = true; });
+  document.querySelectorAll('#gfxSeg button').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.gfx === 'high') === high)));
+  resize();
+}
+document.querySelectorAll('#gfxSeg button').forEach((b) => b.addEventListener('click', () => setGfx(b.dataset.gfx === 'high')));
+document.querySelectorAll('#gfxSeg button').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.gfx === 'high') === GFX.high)));
 $('btnStart').addEventListener('click', () => {
   AudioFX.init(); if (AudioFX.ctx && AudioFX.ctx.state === 'suspended') AudioFX.ctx.resume();
   $('startOverlay').hidden = true;
@@ -2373,6 +2646,9 @@ function frame(now) {
   renderer.render(scene, camera);
 }
 requestAnimationFrame(frame);
+
+// offline play for the web version; the Android app already carries its files
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost') && !window.Capacitor) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
 </script>
 
