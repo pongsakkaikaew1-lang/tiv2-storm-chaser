@@ -14,6 +14,7 @@ Pick a vehicle on the start screen, or switch any time from the **Car** button (
 |---|---|---|
 | TIV2 | 58 mph | Heavy: takes the least damage and wind shove |
 | Joker 1 | 69 mph | Lighter: faster, but the core hurts more |
+| Joker 2 | 51 mph | Heaviest: slow, but shrugs off wind and debris |
 
 ## Play
 
