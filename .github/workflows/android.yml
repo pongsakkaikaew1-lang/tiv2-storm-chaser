@@ -1,0 +1,102 @@
+# Builds the Android app (an offline WebView wrapper around index.html, made with Capacitor)
+# and publishes the APK on the repository's Releases page.
+name: Android APK
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Android only installs an update over an older copy when both are signed with the same key,
+      # so the key made on the first build is kept between builds in the Actions cache.
+      - name: Reuse the signing key
+        id: signing-key
+        uses: actions/cache@v4
+        with:
+          path: ~/tiv2-signing
+          key: tiv2-signing-key-v1
+
+      - name: Make a signing key on the first build
+        if: steps.signing-key.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/tiv2-signing
+          keytool -genkeypair -keystore ~/tiv2-signing/app.keystore -storepass android -keypass android \
+            -alias tiv2 -dname "CN=TIV2 Storm Chaser,O=TIV2,C=US" -keyalg RSA -keysize 2048 -validity 10000
+
+      - name: Collect the game files
+        run: |
+          mkdir -p app/www
+          cp -r index.html manifest.webmanifest vendor fonts icons app/www/
+
+      - name: Create the Android project
+        working-directory: app
+        run: |
+          npm init -y > /dev/null
+          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          npx cap init "TIV2 Storm Chaser" com.tiv2.stormchaser --web-dir www
+          npx cap add android
+          npx cap sync android
+
+      - name: Landscape, full screen, game icon and splash, version number
+        working-directory: app/android/app
+        run: |
+          sed -i 's/<activity/<activity android:screenOrientation="sensorLandscape"/' src/main/AndroidManifest.xml
+          cp ../../../android-app/MainActivity.java src/main/java/com/tiv2/stormchaser/MainActivity.java
+          cp -r ../../../android-app/res/. src/main/res/
+          sed -i 's/#FFFFFF/#0D1116/' src/main/res/values/ic_launcher_background.xml
+          for f in $(find src/main/res -name splash.png); do cp ../../../android-app/splash.png "$f"; done
+          sed -i "s/versionCode 1$/versionCode ${{ github.run_number }}/; s/versionName \"1.0\"/versionName \"1.0.${{ github.run_number }}\"/" build.gradle
+          sed -i "s|^android {|android {\n    signingConfigs { debug { storeFile file('$HOME/tiv2-signing/app.keystore'); storePassword 'android'; keyAlias 'tiv2'; keyPassword 'android' } }|" build.gradle
+          head -n 6 build.gradle
+          grep -n "versionCode\|versionName" build.gradle
+
+      - name: Build the APK
+        working-directory: app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk ../../TIV2-Storm-Chaser.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TIV2-Storm-Chaser-apk
+          path: TIV2-Storm-Chaser.apk
+
+      - name: Publish on the Releases page
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-build-${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: TIV2 Storm Chaser for Android (build ${{ github.run_number }})
+          make_latest: true
+          files: TIV2-Storm-Chaser.apk
+          body: |
+            Android app of TIV2 Storm Chaser. It plays fully offline.
+
+            1. On your Android phone or tablet, download **TIV2-Storm-Chaser.apk** below.
+            2. Open it. If Android asks, allow your browser or file manager to "Install unknown apps".
+            3. Tap Install, then open TIV2 Storm Chaser.
+
+            Built from ${{ github.ref_name }} at ${{ github.sha }}.

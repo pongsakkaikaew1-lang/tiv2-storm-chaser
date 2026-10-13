@@ -1,0 +1,16 @@
+{
+  "name": "TIV2 Storm Chaser",
+  "short_name": "Storm Chaser",
+  "description": "Forecast the storm, chase it in an armored vehicle and collect tornado data.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0d1116",
+  "theme_color": "#0d1116",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
