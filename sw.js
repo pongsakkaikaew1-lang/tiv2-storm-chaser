@@ -1,5 +1,5 @@
 // Offline cache for the web version of the game. Bump VERSION whenever these files change.
-const VERSION = 'tiv2-v2';
+const VERSION = 'tiv2-v3';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'vendor/three.min.js',
   'fonts/fredoka-latin-500-normal.woff2', 'fonts/fredoka-latin-600-normal.woff2',
