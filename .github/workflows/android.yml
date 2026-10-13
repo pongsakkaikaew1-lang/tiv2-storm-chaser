@@ -30,12 +30,20 @@ jobs:
           node-version: '20'
 
       # Android only installs an update over an older copy when both are signed with the same key,
-      # so the debug key Gradle creates on the first build is kept between builds.
+      # so the key made on the first build is kept between builds in the Actions cache.
       - name: Reuse the signing key
+        id: signing-key
         uses: actions/cache@v4
         with:
-          path: ~/.android/debug.keystore
-          key: android-debug-keystore-v1
+          path: ~/tiv2-signing
+          key: tiv2-signing-key-v1
+
+      - name: Make a signing key on the first build
+        if: steps.signing-key.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/tiv2-signing
+          keytool -genkeypair -keystore ~/tiv2-signing/app.keystore -storepass android -keypass android \
+            -alias tiv2 -dname "CN=TIV2 Storm Chaser,O=TIV2,C=US" -keyalg RSA -keysize 2048 -validity 10000
 
       - name: Collect the game files
         run: |
@@ -60,6 +68,8 @@ jobs:
           sed -i 's/#FFFFFF/#0D1116/' src/main/res/values/ic_launcher_background.xml
           for f in $(find src/main/res -name splash.png); do cp ../../../android-app/splash.png "$f"; done
           sed -i "s/versionCode 1$/versionCode ${{ github.run_number }}/; s/versionName \"1.0\"/versionName \"1.0.${{ github.run_number }}\"/" build.gradle
+          sed -i "s|^android {|android {\n    signingConfigs { debug { storeFile file('$HOME/tiv2-signing/app.keystore'); storePassword 'android'; keyAlias 'tiv2'; keyPassword 'android' } }|" build.gradle
+          head -n 6 build.gradle
           grep -n "versionCode\|versionName" build.gradle
 
       - name: Build the APK
